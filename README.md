@@ -1,7 +1,7 @@
-# NUDGE
+# Deep Deictic Reinforcement Learning
 
-This is the implementation of **Neurally gUided Differentiable loGic policiEs (NUDGE)**, a framework for logic RL agents based on differentiable forward reasoning with first-order logic (FOL).
-![](docs/LogicRL.png)
+<!-- This is the implementation of **Neurally gUided Differentiable loGic policiEs (NUDGE)**, a framework for logic RL agents based on differentiable forward reasoning with first-order logic (FOL).
+![](docs/LogicRL.png) -->
 
 ## Quickstart
 
@@ -65,26 +65,3 @@ You add a new environment inside `in/envs/[new_env_name]/`. There, you need to d
 * **action mapping**: action-predicates predicted by the agent need to be mapped to the actual env actions
 
 See the `freeway` env to see how it is done.
-
-
-## Misc
-TODO
-**Using Beam Search to find a set of rules**
-
-![](image/beam_search.png)
-With scoring:
-
-```
-python3 beam_search.py -m getout -r getout_root -t 3 -n 8 --scoring True -d getout.json  
-``` 
-
-Without scoring:
-
-``` 
-python3 beam_search.py -m threefish -r threefishm_root -t 3 -n 8 
-``` 
-
-* **--t**:  Number of rule expansion of clause generation.
-* **--n**:  The size of the beam.
-* **--scoring**: To score the searched rules, a dataset of states information is required.
-* **-d**: The name of dataset to be used for scoring.

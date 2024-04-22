@@ -1,4 +1,4 @@
-algorithm: logic
+algorithm: deictic
 environment: seaquest
 rules: default
 update_steps: 100

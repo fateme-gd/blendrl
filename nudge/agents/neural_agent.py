@@ -18,7 +18,7 @@ class ActorCritic(nn.Module):
         self.rng = random.Random() if rng is None else rng
         self.env = env
 
-        mlp_module_path = f"../envs/{self.env.name}/mlp.py"
+        mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
         self.actor = module.MLP(has_softmax=True)
         self.critic = module.MLP(has_softmax=False, out_size=1)

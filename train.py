@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from nudge.agents.logic_agent import LogicPPO
 from nudge.agents.neural_agent import NeuralPPO
+from nudge.agents.deictic_agent import DeicticPPO
 from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
 from nudge.utils import exp_decay
@@ -74,7 +75,7 @@ def main(algorithm: str,
 
     make_deterministic(seed)
 
-    assert algorithm in ['ppo', 'logic']
+    assert algorithm in ['ppo', 'logic', 'deictic']
 
     if env_kwargs is None:
         env_kwargs = dict()
@@ -101,7 +102,11 @@ def main(algorithm: str,
                      print_summary=True)
 
     # initialize agent
-    if algorithm == "ppo":
+    if algorithm == "deictic":
+        neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
+    elif algorithm == "ppo":
         agent = NeuralPPO(env, lr_actor, lr_critic, optimizer,
                           gamma, epochs, eps_clip, device)
     else:  # logic

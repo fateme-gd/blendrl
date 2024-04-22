@@ -42,7 +42,7 @@ def main(algorithm: str,
          lr_critic: float = 0.0003,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
-         save_steps: int = 250000,
+         save_steps: int = 10000, #250000,
          stats_steps: int = 2000,
          ):
     """

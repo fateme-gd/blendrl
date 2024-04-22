@@ -234,6 +234,10 @@ class DeicticPPO:
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
+            for name, param in self.policy.named_parameters():
+                print(name, param.grad)
+            # for p in self.optimizer.param_groups[0]['params']:
+            #     print(p.grad)
             self.optimizer.step()
             # wandb.log({"loss": loss})
 

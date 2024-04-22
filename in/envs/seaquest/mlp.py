@@ -2,7 +2,7 @@ import torch
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, has_softmax=False, out_size=3, as_dict=False, logic=False, device=None):
+    def __init__(self, has_softmax=False, out_size=6, as_dict=False, logic=False, device=None):
         super().__init__()
         self.logic = logic
         self.as_dict = as_dict

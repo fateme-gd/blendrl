@@ -1,7 +1,7 @@
 from nudge.renderer import Renderer
 
 if __name__ == "__main__":
-    renderer = Renderer(agent_path="out/runs/seaquest/logic/24-04-08-22-12",
+    renderer = Renderer(agent_path="out/runs/seaquest/deictic/24-04-22-17-32",
                         fps=15,
                         deterministic=False,
                         env_kwargs=dict(render_oc_overlay=True),

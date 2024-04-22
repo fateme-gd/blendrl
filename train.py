@@ -188,7 +188,7 @@ def main(algorithm: str,
             # save model weights
             if time_step % save_steps == 1:
                 checkpoint_path = checkpoint_dir / f"step_{time_step}.pth"
-                if algorithm == 'logic':
+                if algorithm == 'logic' or algorithm == 'deictic':
                     agent.save(checkpoint_path, checkpoint_dir, step_list, reward_list, weights_list)
                 else:
                     agent.save(checkpoint_path, checkpoint_dir, step_list, reward_list)

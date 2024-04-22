@@ -1,4 +1,8 @@
 import random
+import pickle
+from pathlib import Path
+import os
+
 
 import torch
 import torch.nn as nn
@@ -19,14 +23,33 @@ class DeicticActor(nn.Module):
         self.neural_actor = neural_actor
         self.logic_actor = logic_actor
         self.device = device
-    
+        self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
+        
+    def _build_action_id_dict(self):
+        env_action_names = list(self.env.pred2action.keys())        
+        # action_probs = torch.zeros(len(env_action_names))
+        env_action_id_to_action_pred_indices = {}
+        # init dic
+        for i, env_action_name in enumerate(env_action_names):
+            env_action_id_to_action_pred_indices[i] = []
+            
+        for i, env_action_name in enumerate(env_action_names):
+            for j,action_pred_name in enumerate(self.logic_actor.get_prednames()):
+                if env_action_name in action_pred_name:
+                    #if i not in env_action_id_to_action_pred_indices:
+                    #    env_action_id_to_action_pred_indices[i] = []
+                    env_action_id_to_action_pred_indices[i].append(j)
+                    # torch.tensor([0.0], device=self.device)
+        return env_action_id_to_action_pred_indices
+        
     def compute_action_probs(self, neural_state, logic_state):
         # logic_action_probs = self.logic_a2c.actor(logic_state)
         # neural_action_probs = self.neural_a2c.actor(neural_state)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         neural_action_probs = self.neural_actor(neural_state)
         # merge action probs 
-        action_probs = torch.softmax(softor([logic_action_probs, neural_action_probs]))
+        merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
+        action_probs = torch.softmax(merged_values, dim=0)
         return action_probs
     
     def to_action_distribution(self, raw_action_probs):
@@ -34,53 +57,28 @@ class DeicticActor(nn.Module):
         #TODO: Implement this method
         
         
-        env_action_names = list(self.env.pred2action.keys())
-        # pred_to_action_index = []
-        # for action_atom in action_atoms:
-        #     action_pred_name = action_atom.predicate.name
-        #     for i, env_action in enumerate(env_action_names):
-        #         if env_action in action_pred_name:
-        #             pred_to_action_index.append()
-        #             break
-        # index_tensor = torch.tensor(pred_to_action_index)  
-        # dist = torch.gather(raw_action_probs, 1, index_tensor)     
-        # model_action: right_to_diver
-        # pred_name: right
+        batch_size = raw_action_probs.size(0)
+        env_action_names = list(self.env.pred2action.keys())        
         
         # action_probs = torch.zeros(len(env_action_names))
-        env_action_id_to_action_pred_indices = {}
-        for i, env_action_name in enumerate(env_action_names):
-            for j,action_pred_name in enumerate(self.logic_actor.get_prednames()):
-                if env_action_name in action_pred_name:
-                    if i not in env_action_id_to_action_pred_indices:
-                        env_action_id_to_action_pred_indices[i] = []
-                    env_action_id_to_action_pred_indices[i].append(j)
                 
         dist_values = []
         for i in range(len(env_action_names)):
-            if i in env_action_id_to_action_pred_indices:
-                indices = torch.tensor(env_action_id_to_action_pred_indices[i], device=self.device)
-                dist_values.append(torch.gather(raw_action_probs[0], 0, indices))
+            if i in self.env_action_id_to_action_pred_indices:
+                indices = torch.tensor(self.env_action_id_to_action_pred_indices[i], device=self.device)\
+                    .expand(batch_size, -1)
+                gathered = torch.gather(raw_action_probs, 1, indices)
+                # merged value for i-th action for samples in the batch
+                merged = softor(gathered, dim=1) # (batch_size, 1) 
+                dist_values.append(merged)
+        
+        
+        action_values = torch.stack(dist_values,dim=1) # (batch_size, n_actions) 
                 
                 
-        action_dist = torch.stack([softor(action_values) for action_values in dist_values])
+        # action_raw_dist = torch.stack([softor(action_values, dim=1) for action_values in dist_values])
+        action_dist = torch.softmax(action_values, dim=1)
         return action_dist
-        #     probs = []
-        #     for index in indices:
-        #         probs.append(raw_action_probs[index])
-        #     dist_values.append(softor(probs))
-        
-        
-        # merged_env_action_distribution = []
-        # for env_action in env_action_names:
-        #     probs_for_an_env_action = []
-        #     for i, action_atom in enumerate(action_atoms):
-        #         if env_action in action_atom.predicate.name:
-        #             probs_for_an_env_action.append(raw_action_probs[i])
-        #     merged_prob_for_an_env_action = softor(probs_for_an_env_action)
-        #     merged_env_action_distribution.append(merged_prob_for_an_env_action)
-        # action_distribution = torch.cat(merged_env_action_distribution)
-        # return action_distribution
         
     
     def forward(self, neural_state, logic_state):
@@ -104,24 +102,19 @@ class DeicticActorCritic(nn.Module):
         self.actor = DeicticActor(env, self.neural_actor, self.logic_actor)
         self.critic = module.MLP(out_size=1, logic=True)
         
+        # the number of actual actions on the environment
+        self.num_actions = len(self.env.pred2action.keys())
+        
+        self.uniform = Categorical(
+            torch.tensor([1.0 / self.num_actions for _ in range(self.num_actions)], device=device))
+        self.upprior = Categorical(
+            torch.tensor([0.9] + [0.1 / (self.num_actions-1) for _ in range(self.num_actions-1)], device=device))
+
         
     def forward(self):
         raise NotImplementedError
     
-    # def compute_action_probs(self, neural_state, logic_state):
-    #     # logic_action_probs = self.logic_a2c.actor(logic_state)
-    #     # neural_action_probs = self.neural_a2c.actor(neural_state)
-    #     logic_action_probs = self.logic_actor(logic_state)
-    #     neural_action_probs = self.neural_actor(neural_state)
-    #     # merge action probs 
-    #     action_probs = torch.softmax(softor([logic_action_probs, neural_action_probs]))
-    #     return action_probs
-
     def act(self, neural_state, logic_state, epsilon=0.0):
-        # logic_action_probs = self.logic_a2c.actor(logic_state)
-        # neural_action_probs = self.neural_a2c.actor(neural_state)
-        # merge action probs 
-        # action_probs = self.compute_action_probs(neural_state, logic_state)
         action_probs = self.actor(neural_state, logic_state)
 
         # e-greedy
@@ -139,7 +132,7 @@ class DeicticActorCritic(nn.Module):
         return action.detach(), action_logprob.detach()
 
     def evaluate(self, neural_state, logic_state, action):
-        action_probs = self.compute_action_probs(neural_state, logic_state)   
+        action_probs = self.actor(neural_state, logic_state)   
         dist = Categorical(action_probs)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
@@ -158,6 +151,9 @@ class DeicticPPO:
         self.device = device
         self.logic_ppo = LogicPPO(*logic_ppo_params)
         self.neural_ppo = NeuralPPO(*neural_ppo_params)
+        self.gamma = self.logic_ppo.gamma
+        self.eps_clip = self.logic_ppo.eps_clip
+        self.epochs = self.logic_ppo.epochs
         self.buffer = RolloutBuffer()
         self.policy = DeicticActorCritic(env, rules, device)
         self.optimizer = optimizer([
@@ -190,7 +186,7 @@ class DeicticPPO:
         action_logprob = torch.squeeze(action_logprob)
         self.buffer.logprobs.append(action_logprob)
 
-        predicate = self.prednames[action.item()]
+        predicate = self.logic_ppo.prednames[action.item()]
         return predicate
 
     def update(self):
@@ -246,6 +242,38 @@ class DeicticPPO:
 
         # clear buffer
         self.buffer.clear()
+        
+        
+    def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):
+        torch.save(self.policy_old.state_dict(), checkpoint_path)
+        with open(directory / "data.pkl", "wb") as f:
+            pickle.dump(step_list, f)
+            pickle.dump(reward_list, f)
+            pickle.dump(weight_list, f)
+
+    def load(self, directory: Path):
+        # only for recover form crash
+        model_name = input('Enter file name: ')
+        model_file = os.path.join(directory, model_name)
+        self.policy_old.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
+        self.policy.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
+        with open(directory / "data.pkl", "rb") as f:
+            step_list = pickle.load(f)
+            reward_list = pickle.load(f)
+            weight_list = pickle.load(f)
+        return step_list, reward_list, weight_list
+
+    def get_predictions(self, state):
+        self.prediction = state
+        return self.prediction
+
+    def get_weights(self):
+        return self.policy.actor.get_params()
+
+    def get_prednames(self):
+        return self.policy.actor.get_prednames()
+
+
         
         
 

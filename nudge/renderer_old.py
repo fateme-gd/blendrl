@@ -80,7 +80,7 @@ class Renderer:
         length = 0
         ret = 0
 
-        obs, obs_nn = self.env.reset()
+        obs, _ = self.env.reset()
 
         while self.running:
             self.reset = False
@@ -91,17 +91,16 @@ class Renderer:
 
             if self.takeover:  # human plays game manually
                 action = self._get_action()
-                self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
+                self.model.act(th.unsqueeze(obs, 0))  # update the model's internals
             else:  # AI plays the game
-                action, _ = self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
-                # action, _ = self.model.act(th.unsqueeze(obs, 0))
+                action, _ = self.model.act(th.unsqueeze(obs, 0))
                 action = self.predicates[action.item()]
 
-            (new_obs, new_obs_nn), reward, done = self.env.step(action, is_mapped=self.takeover)
+            (new_obs, _), reward, done = self.env.step(action, is_mapped=self.takeover)
             
-            self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
-            # print(self.model.actor.logic_actor.V_T)
-            # self.model.actor.logic_actor.print_valuations()
+            self.model.actor.print_valuations(self.model.actor.V_T)
+            print(self.model.actor.V_T)
+            self.model.actor.print_valuations()
 
             self._render()
 
@@ -115,7 +114,6 @@ class Renderer:
                     self._render()
 
                 obs = new_obs
-                obs_nn = new_obs_nn
                 length += 1
 
                 if done:

@@ -252,6 +252,8 @@ class DeicticPPO:
             pickle.dump(weight_list, f)
 
     def load(self, directory: Path):
+        self.neural_ppo.load(directory)
+        self.logic_ppo.load(directory)
         # only for recover form crash
         model_name = input('Enter file name: ')
         model_file = os.path.join(directory, model_name)

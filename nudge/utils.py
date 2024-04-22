@@ -9,6 +9,7 @@ import re
 
 from .agents.logic_agent import NsfrActorCritic
 from .agents.neural_agent import ActorCritic
+from .agents.deictic_agent import DeicticActorCritic
 from nudge.env import NudgeBaseEnv
 
 
@@ -79,8 +80,10 @@ def load_model(model_dir,
     # Initialize the model
     if algorithm == 'ppo':
         model = ActorCritic(env).to(device)
-    else:  # algorithm == 'logic'
+    elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
+    else:
+        model = DeicticActorCritic(env, device=device, rules=rules).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:

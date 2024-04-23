@@ -21,6 +21,11 @@ from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
 from nudge.utils import exp_decay
 
+# Log in to your W&B account
+import wandb
+wandb.login()
+
+
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
@@ -38,12 +43,14 @@ def main(algorithm: str,
          eps_clip: float = 0.2,
          gamma: float = 0.99,
          optimizer: Optimizer = Adam,
-         lr_actor: float = 0.001,
-         lr_critic: float = 0.0003,
+         # lr_actor: float = 0.001,
+         lr_actor: float = 1e-2,
+         # lr_critic: float = 0.0003,
+         lr_critic: float = 1e-2,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
          save_steps: int = 10000, #250000,
-         stats_steps: int = 2000,
+         stats_steps: int = 1000,
          ):
     """
 
@@ -82,7 +89,7 @@ def main(algorithm: str,
 
     if update_steps is None:
         if algorithm == 'ppo':
-            update_steps = max_ep_len * 4
+            update_steps = 100 #max_ep_len * 4
         else:
             update_steps = 100
 
@@ -103,9 +110,10 @@ def main(algorithm: str,
 
     # initialize agent
     if algorithm == "deictic":
-        neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
-        logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
-        agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
+        # neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        # logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        # agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
     elif algorithm == "ppo":
         agent = NeuralPPO(env, lr_actor, lr_critic, optimizer,
                           gamma, epochs, eps_clip, device)
@@ -147,6 +155,13 @@ def main(algorithm: str,
     rtpt.start()
 
     pbar = tqdm(total=total_steps - time_step, file=sys.stdout)
+    
+    wandb.init(
+        project="DeepDeicticRL",
+        config={
+            "steps": total_steps,
+            })
+    wandb.watch(agent, log_freq=100)
     while time_step < total_steps:
         state = env.reset()
         ret = 0  # return
@@ -184,6 +199,9 @@ def main(algorithm: str,
                 reward_list.append([avg_return])
                 if algorithm == 'logic':
                     weights_list.append([(agent.get_weights().tolist())])
+                    
+                # save on wandb
+                wandb.log({"avg_return": avg_return, "time_step": time_step})
 
             # save model weights
             if time_step % save_steps == 1:

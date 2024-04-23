@@ -48,7 +48,9 @@ class DeicticActor(nn.Module):
         # neural_action_probs = self.neural_a2c.actor(neural_state)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         neural_action_probs = self.neural_actor(neural_state)
-        beta = self.switch(neural_state)
+        # beta = self.switch(neural_state)
+        batch_size = neural_state.size(0)
+        beta = torch.tensor([[0.5]]).repeat(batch_size, 1).to(self.device)
         ones = torch.ones_like(beta).to(self.device)
         
         action_probs = beta * neural_action_probs + (ones - beta) * logic_action_probs
@@ -150,16 +152,17 @@ class DeicticActorCritic(nn.Module):
         return self.actor.get_prednames()
     
 
-class DeicticPPO:
+class DeicticPPO(nn.Module):
     # def __init__(self, env: NudgeBaseEnv, rules: str, lr_actor, lr_critic, optimizer,
     #              gamma, epochs, eps_clip, device=None):
-    def __init__(self, env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device=None):
+    def __init__(self, env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device):
+        super(DeicticPPO, self).__init__()
         self.device = device
-        self.logic_ppo = LogicPPO(*logic_ppo_params)
-        self.neural_ppo = NeuralPPO(*neural_ppo_params)
-        self.gamma = self.logic_ppo.gamma
-        self.eps_clip = self.logic_ppo.eps_clip
-        self.epochs = self.logic_ppo.epochs
+        # self.logic_ppo = LogicPPO(*logic_ppo_params)
+        # self.neural_ppo = NeuralPPO(*neural_ppo_params)
+        self.gamma = gamma
+        self.eps_clip = eps_clip
+        self.epochs = epochs
         self.buffer = RolloutBuffer()
         self.policy = DeicticActorCritic(env, rules, device)
         self.optimizer = optimizer([
@@ -169,6 +172,8 @@ class DeicticPPO:
 
         self.policy_old = DeicticActorCritic(env, rules, device)
         self.policy_old.load_state_dict(self.policy.state_dict())
+        
+        self.prednames = self.get_prednames()
 
         self.MseLoss = nn.MSELoss()
     
@@ -192,7 +197,7 @@ class DeicticPPO:
         action_logprob = torch.squeeze(action_logprob)
         self.buffer.logprobs.append(action_logprob)
 
-        predicate = self.logic_ppo.prednames[action.item()]
+        predicate = self.prednames[action.item()]
         return predicate
 
     def update(self):
@@ -281,7 +286,7 @@ class DeicticPPO:
         return self.policy.actor.get_params()
 
     def get_prednames(self):
-        return self.policy.actor.get_prednames()
+        return self.policy.logic_actor.get_prednames()
 
 
         

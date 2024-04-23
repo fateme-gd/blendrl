@@ -3,7 +3,7 @@ import torch
 
 class MLP(torch.nn.Module):
 
-    def __init__(self, has_softmax=False, out_size=3, as_dict=False, logic=False, device=None):
+    def __init__(self, has_softmax=False, has_sigmoid=False, out_size=3, as_dict=False, logic=False, device=None):
         super().__init__()
         self.logic = logic
         self.as_dict = as_dict
@@ -21,6 +21,9 @@ class MLP(torch.nn.Module):
 
         if has_softmax:
             modules.append(torch.nn.Softmax(dim=-1))
+            
+        if has_sigmoid:
+            modules.append(torch.nn.Sigmoid())
 
         self.mlp = torch.nn.Sequential(*modules)
 

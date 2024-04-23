@@ -17,11 +17,12 @@ from nsfr.utils.common import load_module
 from nsfr.common import get_nsfr_model
 
 class DeicticActor(nn.Module):
-    def __init__(self, env, neural_actor, logic_actor, device=None):
+    def __init__(self, env, neural_actor, logic_actor, switch, device=None):
         super(DeicticActor, self).__init__()
         self.env = env
         self.neural_actor = neural_actor
         self.logic_actor = logic_actor
+        self.switch = switch
         self.device = device
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
@@ -47,9 +48,13 @@ class DeicticActor(nn.Module):
         # neural_action_probs = self.neural_a2c.actor(neural_state)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         neural_action_probs = self.neural_actor(neural_state)
+        beta = self.switch(neural_state)
+        ones = torch.ones_like(beta).to(self.device)
+        
+        action_probs = beta * neural_action_probs + (ones - beta) * logic_action_probs
         # merge action probs 
-        merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
-        action_probs = torch.softmax(merged_values, dim=0)
+        # merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
+        # action_probs = torch.softmax(merged_values, dim=0)
         return action_probs
     
     def to_action_distribution(self, raw_action_probs):
@@ -99,7 +104,8 @@ class DeicticActorCritic(nn.Module):
         module = load_module(mlp_module_path)
         self.neural_actor = module.MLP(has_softmax=True)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.actor = DeicticActor(env, self.neural_actor, self.logic_actor)
+        self.switch = module.MLP(out_size=1, has_sigmoid=True)
+        self.actor = DeicticActor(env, self.neural_actor, self.logic_actor, self.switch)
         self.critic = module.MLP(out_size=1, logic=True)
         
         # the number of actual actions on the environment
@@ -234,10 +240,8 @@ class DeicticPPO:
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
-            for name, param in self.policy.named_parameters():
-                print(name, param.grad)
-            # for p in self.optimizer.param_groups[0]['params']:
-            #     print(p.grad)
+            # for name, param in self.policy.named_parameters():
+            #     print(name, param.grad)
             self.optimizer.step()
             # wandb.log({"loss": loss})
 

@@ -1,4 +1,4 @@
 algorithm: deictic
-environment: seaquest
+environment: getout
 rules: default
 update_steps: 100

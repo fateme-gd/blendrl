@@ -27,6 +27,12 @@ class NudgeEnv(NudgeBaseEnv):
         register(id="getout",
                  entry_point="env_src.getout.getout.getout:Getout")
         self.env = gymnasium.make("getout")  # FIXME
+        # import gym
+        # gym.register(
+        #     id='getout',
+        #     entry_point='env_src.getout.getout.getout:Getout')   
+        # print(gym.envs.registry.keys())
+        # self.env = gym.make("getout")
 
     def reset(self):
         state = self.env.reset()

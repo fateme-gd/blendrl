@@ -139,7 +139,7 @@ def main(algorithm: str,
     running_ret = 0  # running return
     n_episodes = 0
 
-    rtpt = RTPT(name_initials='HS', experiment_name='LogicRL',
+    rtpt = RTPT(name_initials='HS', experiment_name='DeepDeicticRL',
                 max_iterations=total_steps)
 
     # Start the RTPT tracking

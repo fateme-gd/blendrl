@@ -9,12 +9,14 @@
             "type": "debugpy",
             "request": "launch",
             "program": "train.py",
+            "pythonPath": "python",
             "console": "integratedTerminal"
         },
         {
             "name": "play",
             "type": "debugpy",
             "request": "launch",
+            "pythonPath": "python",
             "program": "play_gui.py",
             "console": "integratedTerminal"
         }

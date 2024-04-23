@@ -23,7 +23,7 @@ class NsfrActorCritic(nn.Module):
 
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
-        self.critic = module.MLP(out_size=1, logic=True)
+        self.critic = module.MLP(device=device, out_size=1, logic=True)
 
         self.num_actions = len(self.prednames)
         self.uniform = Categorical(

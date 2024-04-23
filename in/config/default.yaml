@@ -1,4 +1,5 @@
 algorithm: deictic
-environment: getout
+environment: seaquest
 rules: default
 update_steps: 100
+device: cuda:0

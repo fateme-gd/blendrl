@@ -6,7 +6,7 @@ scikit-learn
 filelock
 pyglet
 torchsummary
-setuptools>=58.5.3
+setuptools==59.5.0
 tensorboard
 numpy
 #torchvision

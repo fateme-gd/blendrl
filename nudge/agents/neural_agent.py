@@ -20,8 +20,8 @@ class ActorCritic(nn.Module):
 
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
-        self.actor = module.MLP(has_softmax=True)
-        self.critic = module.MLP(has_softmax=False, out_size=1)
+        self.actor = module.MLP(device=device, has_softmax=True)
+        self.critic = module.MLP(device=device, has_softmax=False, out_size=1)
 
         self.n_actions = self.env.n_actions()
         self.uniform = Categorical(

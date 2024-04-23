@@ -71,7 +71,7 @@ class DeicticActor(nn.Module):
         for i in range(len(env_action_names)):
             if i in self.env_action_id_to_action_pred_indices:
                 indices = torch.tensor(self.env_action_id_to_action_pred_indices[i], device=self.device)\
-                    .expand(batch_size, -1)
+                    .expand(batch_size, -1).to(self.device)
                 gathered = torch.gather(raw_action_probs, 1, indices)
                 # merged value for i-th action for samples in the batch
                 merged = softor(gathered, dim=1) # (batch_size, 1) 
@@ -91,7 +91,7 @@ class DeicticActor(nn.Module):
         
 
 class DeicticActorCritic(nn.Module):
-    def __init__(self, env, rules, device=None, rng=None):
+    def __init__(self, env, rules, device, rng=None):
         super(DeicticActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
@@ -102,11 +102,11 @@ class DeicticActorCritic(nn.Module):
         self.rules = rules
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
-        self.neural_actor = module.MLP(has_softmax=True)
+        self.neural_actor = module.MLP(has_softmax=True, device=device)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.switch = module.MLP(out_size=1, has_sigmoid=True)
-        self.actor = DeicticActor(env, self.neural_actor, self.logic_actor, self.switch)
-        self.critic = module.MLP(out_size=1, logic=True)
+        self.switch = module.MLP(out_size=1, has_sigmoid=True, device=device)
+        self.actor = DeicticActor(env, self.neural_actor, self.logic_actor, self.switch, device=device)
+        self.critic = module.MLP(device=device, out_size=1, logic=True)
         
         # the number of actual actions on the environment
         self.num_actions = len(self.env.pred2action.keys())

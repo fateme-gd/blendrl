@@ -2,7 +2,7 @@ import torch
 
 
 class MLP(torch.nn.Module):
-    def __init__(self, has_softmax=False, has_sigmoid=False, out_size=6, as_dict=False, logic=False, device=None):
+    def __init__(self, device, has_softmax=False, has_sigmoid=False, out_size=6, as_dict=False, logic=False):
         super().__init__()
         self.logic = logic
         self.as_dict = as_dict
@@ -13,11 +13,11 @@ class MLP(torch.nn.Module):
         self.num_in_features = (encoding_base_features + encoding_entity_features) * encoding_max_entities
 
         modules = [
-            torch.nn.Linear(self.num_in_features, 40),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(40, 20),
-            torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(20, out_size)
+            torch.nn.Linear(self.num_in_features, 40).to(device),
+            torch.nn.ReLU(inplace=True).to(device),
+            torch.nn.Linear(40, 20).to(device),
+            torch.nn.ReLU(inplace=True).to(device),
+            torch.nn.Linear(20, out_size).to(device)
         ]
 
         if has_softmax:
@@ -27,6 +27,7 @@ class MLP(torch.nn.Module):
             modules.append(torch.nn.Sigmoid())
 
         self.mlp = torch.nn.Sequential(*modules)
+        self.mlp.to(device)
 
     def forward(self, state):
         features = state.float()

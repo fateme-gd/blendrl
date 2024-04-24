@@ -48,9 +48,9 @@ class DeicticActor(nn.Module):
         # neural_action_probs = self.neural_a2c.actor(neural_state)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         neural_action_probs = self.neural_actor(neural_state)
-        # beta = self.switch(neural_state)
-        batch_size = neural_state.size(0)
-        beta = torch.tensor([[0.5]]).repeat(batch_size, 1).to(self.device)
+        beta = self.switch(neural_state)
+        # batch_size = neural_state.size(0)
+        # beta = torch.tensor([[0.5]]).repeat(batch_size, 1).to(self.device)
         ones = torch.ones_like(beta).to(self.device)
         
         action_probs = beta * neural_action_probs + (ones - beta) * logic_action_probs

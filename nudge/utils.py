@@ -11,7 +11,27 @@ from .agents.logic_agent import NsfrActorCritic
 from .agents.neural_agent import ActorCritic
 from .agents.deictic_agent import DeicticActorCritic
 from nudge.env import NudgeBaseEnv
+from functools import reduce
+ 
+def to_proportion(dic):
+    # Using reduce to get the sum of all values in the dictionary
+    temp = reduce(lambda x, y: x + y, dic.values())
+ 
+    # Using dictionary comprehension to divide each value by the sum of all values
+    res = {k: v / temp for k, v in dic.items()}
+    return res
 
+def get_action_stats(env, actions):
+    env_actions = env.pred2action.keys()
+    frequency_dic = {}
+    for action in env_actions:
+        frequency_dic[action] = 0
+        
+    for i, action in enumerate(actions):
+        frequency_dic[action] += 1
+    
+    action_proportion = to_proportion(frequency_dic)
+    return action_proportion
 
 def save_hyperparams(signature, local_scope, save_path, print_summary: bool = False):
     hyperparams = {}

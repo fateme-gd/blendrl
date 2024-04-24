@@ -40,8 +40,8 @@ class NudgeEnv(NudgeBaseEnv):
         return self.convert_state(state)
 
     def step(self, action, is_mapped: bool = False):
-        if not is_mapped:
-            action = self.map_action(action)
+        # if not is_mapped:
+        #     action = self.map_action(action)
         _, reward, done, _, _ = self.env.step(action)
         state = self.env.objects
         return self.convert_state(state), reward, done

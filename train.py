@@ -19,7 +19,7 @@ from nudge.agents.neural_agent import NeuralPPO
 from nudge.agents.deictic_agent import DeicticPPO
 from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
-from nudge.utils import exp_decay
+from nudge.utils import exp_decay, get_action_stats
 
 # Log in to your W&B account
 import wandb
@@ -50,7 +50,7 @@ def main(algorithm: str,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
          save_steps: int = 10000, #250000,
-         stats_steps: int = 1000,
+         stats_steps: int = 100,
          ):
     """
 
@@ -168,9 +168,11 @@ def main(algorithm: str,
         n_episodes += 1
         epsilon = epsilon_fn(i_episode)
 
+        action_history = []
         # Play episode
         for t in range(max_ep_len):
             action = agent.select_action(state, epsilon=epsilon)
+            action_history.append(list(env.pred2action.keys())[action.detach().cpu().numpy().item()])
 
             state, reward, done = env.step(action)
 
@@ -202,6 +204,9 @@ def main(algorithm: str,
                     
                 # save on wandb
                 wandb.log({"avg_return": avg_return, "time_step": time_step})
+                
+                action_stats = get_action_stats(env, action_history)
+                print(action_stats)
 
             # save model weights
             if time_step % save_steps == 1:

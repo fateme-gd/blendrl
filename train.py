@@ -44,13 +44,13 @@ def main(algorithm: str,
          gamma: float = 0.99,
          optimizer: Optimizer = Adam,
          # lr_actor: float = 0.001,
-         lr_actor: float = 1e-2,
+         lr_actor: float = 1e-3,
          # lr_critic: float = 0.0003,
-         lr_critic: float = 1e-2,
+         lr_critic: float = 3e-4,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
-         save_steps: int = 10000, #250000,
-         stats_steps: int = 1000,
+         save_steps: int = 250000,
+         stats_steps: int = 2000,
          ):
     """
 

@@ -13,11 +13,12 @@ class MLP(torch.nn.Module):
         self.num_in_features = (encoding_base_features + encoding_entity_features) * encoding_max_entities
 
         modules = [
-            torch.nn.Linear(self.num_in_features, 40).to(device),
+            torch.nn.Linear(self.num_in_features, 120).to(device),
             torch.nn.ReLU(inplace=True).to(device),
-            torch.nn.Linear(40, 20).to(device),
+            torch.nn.Linear(120, 60).to(device),
             torch.nn.ReLU(inplace=True).to(device),
-            torch.nn.Linear(20, out_size).to(device)
+            torch.nn.Linear(60, out_size).to(device)
+            # torch.nn.Linear(120, out_size).to(device)
         ]
 
         if has_softmax:

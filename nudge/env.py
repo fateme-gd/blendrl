@@ -8,6 +8,7 @@ class NudgeBaseEnv(ABC):
     name: str
     pred2action: Dict[str, int]  # predicate name to action index
     env: object  # the wrapped environment
+    raw_env: object # the raw RGB environment, not RAM
 
     def __init__(self, mode: str):
         self.mode = mode  # either 'ppo' or 'logic'
@@ -30,8 +31,8 @@ class NudgeBaseEnv(ABC):
         """Turns the raw state representation into neural representation."""
         raise NotImplementedError
 
-    def convert_state(self, state) -> (torch.tensor, torch.tensor):
-        return self.extract_logic_state(state), self.extract_neural_state(state)
+    def convert_state(self, state, raw_state) -> (torch.tensor, torch.tensor):
+        return self.extract_logic_state(state), self.extract_neural_state(raw_state)
 
     def map_action(self, model_action) -> int:
         """Converts a model action to the corresponding env action."""
@@ -49,7 +50,7 @@ class NudgeBaseEnv(ABC):
         return len(list(set(self.pred2action.items())))
 
     @staticmethod
-    def from_name(name: str, **kwargs):
+    def from_name(name: str, seed: int, **kwargs):
         env_path = f"in/envs/{name}/env.py"
         env_module = load_module(env_path)
         return env_module.NudgeEnv(**kwargs)

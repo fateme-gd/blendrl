@@ -16,3 +16,5 @@ down_test_global:1:image
 down_test_object:1:image
 down_true:1:image
 down_false:1:image
+neural_agent:1:image
+logic_agent:1:image

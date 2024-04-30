@@ -119,6 +119,9 @@ class DataUtils(object):
     def get_clauses(self, lang):
         return self.load_clauses(self.base_path + 'clauses.txt', lang)
 
+    def get_meta_clauses(self, lang):
+        return self.load_clauses(self.base_path + 'meta_clauses.txt', lang)
+    
     def get_bk(self, lang):
         return self.load_atoms(self.base_path + 'bk.txt', lang)
 

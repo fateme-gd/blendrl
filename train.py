@@ -23,7 +23,7 @@ from nudge.utils import exp_decay, get_action_stats
 
 # Log in to your W&B account
 import wandb
-wandb.login()
+# wandb.login()
 
 
 OUT_PATH = Path("out/")
@@ -93,7 +93,7 @@ def main(algorithm: str,
         else:
             update_steps = 100
 
-    env = NudgeBaseEnv.from_name(environment, mode=algorithm, **env_kwargs)
+    env = NudgeBaseEnv.from_name(environment, mode=algorithm, seed=seed, **env_kwargs)
 
     now = datetime.now()
     experiment_dir = OUT_PATH / "runs" / environment / algorithm / now.strftime("%y-%m-%d-%H-%M")
@@ -156,12 +156,12 @@ def main(algorithm: str,
 
     pbar = tqdm(total=total_steps - time_step, file=sys.stdout)
     
-    wandb.init(
-        project="DeepDeicticRL",
-        config={
-            "steps": total_steps,
-            })
-    wandb.watch(agent, log_freq=100)
+    # wandb.init(
+    #     project="DeepDeicticRL",
+    #     config={
+    #         "steps": total_steps,
+    #         })
+    # wandb.watch(agent, log_freq=100)
     while time_step < total_steps:
         state = env.reset()
         ret = 0  # return
@@ -203,7 +203,7 @@ def main(algorithm: str,
                     weights_list.append([(agent.get_weights().tolist())])
                     
                 # save on wandb
-                wandb.log({"avg_return": avg_return, "time_step": time_step})
+                # wandb.log({"avg_return": avg_return, "time_step": time_step})
                 
                 action_stats = get_action_stats(env, action_history)
                 print(action_stats)

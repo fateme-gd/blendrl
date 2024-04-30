@@ -35,6 +35,7 @@ def get_lang(lark_path, lang_base_path, dataset_type, dataset, term_depth, use_l
     # atoms = du.get_facts(lang)
     return lang, clauses, bk, bk_clauses, terms, atoms
 
+
 def get_lang_behind_the_scenes(lark_path, lang_base_path, term_depth):
     """Load the language of first-order logic from files.
 

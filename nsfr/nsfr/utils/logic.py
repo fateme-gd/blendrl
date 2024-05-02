@@ -23,6 +23,19 @@ def get_lang(lark_path, lang_base_path, dataset):
     return lang, clauses, bk, atoms
 
 
+def get_meta_lang(lark_path, lang_base_path, dataset):
+    """Load the language of first-order logic from files.
+
+    Read the language, clauses, background knowledge from files.
+    Atoms are generated from the language.
+    """
+    du = DataUtils(lark_path=lark_path, lang_base_path=lang_base_path, dataset=dataset)
+    lang = du.load_language()
+    clauses = du.get_meta_clauses(lang)
+    bk = du.get_bk(lang)
+    atoms = generate_atoms(lang)
+    return lang, clauses, bk, atoms
+
 def build_infer_module(clauses, atoms, lang, device, m=3, infer_step=3, train=False):
     te = TensorEncoder(lang, atoms, clauses, device=device)
     I = te.encode()

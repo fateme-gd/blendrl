@@ -19,6 +19,18 @@
             "pythonPath": "python",
             "program": "play_gui.py",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "cleanrl train",
+            "type": "debugpy",
+            "request": "launch",
+            "pythonPath": "python",
+            "program": "cleanrl/cleanrl/ppo_atari.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-id",
+                "Seaquest-v4"
+            ],
         }
     ]
 }

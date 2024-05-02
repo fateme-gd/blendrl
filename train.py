@@ -50,7 +50,7 @@ def main(algorithm: str,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
          save_steps: int = 250000,
-         stats_steps: int = 2000,
+         stats_steps: int = 100,
          ):
     """
 

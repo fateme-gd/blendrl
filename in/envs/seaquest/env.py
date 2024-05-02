@@ -6,6 +6,10 @@ import numpy as np
 import torch as th
 from ocatari.ram.seaquest import MAX_ESSENTIAL_OBJECTS
 import gymnasium
+from stable_baselines3.common.env_util import make_atari_env
+from stable_baselines3.common.vec_env import VecFrameStack
+
+from utils import load_cleanrl_envs
 
 class NudgeEnv(NudgeBaseEnv):
     name = "seaquest"
@@ -21,8 +25,14 @@ class NudgeEnv(NudgeBaseEnv):
 
     def __init__(self, mode: str, render_mode="rgb_array", render_oc_overlay=False, seed=None):
         super().__init__(mode)
-        self.raw_env = gymnasium.make("SeaquestNoFrameskip-v4")
-        self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
+        #self.raw_env = gymnasium.make("SeaquestNoFrameskip-v4")
+        # self.raw_env = gymnasium.make("Seaquest-v4")
+        self.raw_env = load_cleanrl_envs("Seaquest-v4")
+        # self.raw_env = env = make_atari_env('SeaquestNoFrameskip-v4', n_envs=1, seed=seed)
+        # self.raw_env = VecFrameStack(env, n_stack=4)
+
+        #self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
+        self.env = OCAtari(env_name="Seaquest-v4", mode="ram",
                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         self.n_actions = 6
         self.n_raw_actions = 18
@@ -41,6 +51,7 @@ class NudgeEnv(NudgeBaseEnv):
     def reset(self):
         _, _ = self.env.reset(seed=self.seed)
         raw_state, _ = self.raw_env.reset(seed=self.seed)
+        # raw_state = raw_state.unsqueeze(0)
         state = self.env.objects
         return self.extract_logic_state(state), self.extract_neural_state(raw_state)
         # return  self.convert_state(state, raw_state)
@@ -51,10 +62,13 @@ class NudgeEnv(NudgeBaseEnv):
         # step RAM env
         obs, reward, done, _, _ = self.env.step(action)
         # ste RGB env
-        raw_obs, raw_reward, raw_done, _, _ = self.raw_env.step(action)
-        assert reward == raw_reward and done == raw_done
+        x = self.raw_env.step(action.unsqueeze(0)) 
+        raw_obs, raw_reward, raw_done, _, _ = x
+        # assert reward == raw_reward and done == raw_done, "Two envs conflict: rewards: {} and {}, dones: {} and {}".format(reward, raw_reward, done, raw_done)  
+        assert done == raw_done, "Two envs conflict: dones: {} and {}".format(done, raw_done)  
         state = self.env.objects
         raw_state = raw_obs
+        # raw_state = raw_state.unsqueeze(0)
         return self.convert_state(state, raw_state), reward, done
 
     def extract_logic_state(self, input_state):
@@ -76,6 +90,7 @@ class NudgeEnv(NudgeBaseEnv):
         return state
 
     def extract_neural_state(self, raw_input_state):
+        # print(raw_input_state.shape)
         return raw_input_state
 
     def close(self):

@@ -11,12 +11,14 @@ from .logic_agent import LogicPPO, NsfrActorCritic
 from .neural_agent import NeuralPPO, ActorCritic
 from neumann.src.torch_utils import softor
 # from nudge.env import NudgeBaseEnv
+from torch.distributions.categorical import Categorical
+
 
 from torch.distributions import Categorical
 from nsfr.utils.common import load_module
 from nsfr.common import get_nsfr_model
 
-from utils import get_meta_actor, extract_policy_probs
+from utils import get_meta_actor, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
 
 from stable_baselines3 import PPO
 
@@ -50,20 +52,33 @@ class DeicticActor(nn.Module):
     def compute_action_probs(self, neural_state, logic_state):
         # logic_action_probs = self.logic_a2c.actor(logic_state)
         # neural_action_probs = self.neural_a2c.actor(neural_state)
+        # state: B * N
+        batch_size = neural_state.size(0)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         # neural_action_probs = self.neural_actor(neural_state)
         neural_action_probs = self.to_neural_action_distribution(neural_state)
-  
+        
+        # action_probs: B * N_actions
         # beta = self.switch(neural_state)
         batch_size = neural_state.size(0)
         # beta = torch.tensor([[0.5]]).repeat(batch_size, 1).to(self.device)
-        beta = torch.tensor([[1.0]]).repeat(batch_size, 1).to(self.device)
-        ones = torch.ones_like(beta).to(self.device)
+        # beta = torch.tensor([[1.0]]).repeat(batch_size, 1).to(self.device)
+        # ones = torch.ones_like(beta).to(self.device)
         
-        weights = self.to_policy_distribution(logic_state)
+        # B * 2
+        weights = self.to_meta_policy_distribution(logic_state)
+        print("neural: {}, logic: {}".format(weights[:,0], weights[:,1]))
+        n_actions = neural_action_probs.size(1)
+        
+        # B * N_actions * 2
+        weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
+        # print(weights)
+        
+        self.w_policy = weights
         
         # p = w1 * p_neural + w2 * p_logic
-        action_probs = weights[:,0] * neural_action_probs + weights[:,1] * logic_action_probs
+        
+        action_probs = weights[:,:,0] * neural_action_probs + weights[:,:,1] * logic_action_probs
         # merge action probs 
         # merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
         # action_probs = torch.softmax(merged_values, dim=0)
@@ -72,19 +87,22 @@ class DeicticActor(nn.Module):
     def select_policy(self, neural_state, logic_state):
         V_T_meta = self.meta_actor(logic_state)
         policy_probs = self.to_policy_distribution(V_T_meta)
-        policy_select_vector = F.gumbel_softmax(policy_probs)
-        return policy_select_vector
+        return policy_probs
+        # policy_select_vector = F.gumbel_softmax(policy_probs)
+        # return policy_select_vector
         
         
-    def to_policy_distribution(self, logic_state):
-        V_T = self.meta_actor(logic_state)
+    def to_meta_policy_distribution(self, logic_state):
+        policy_probs = self.meta_actor(logic_state)
         # get prob for neural and logic policy
-        probs = extract_policy_probs(self.meta_actor, V_T, self.device)
+        # probs = extract_policy_probs(self.meta_actor, V_T, self.device)
         # to logit
-        logits = torch.log(probs)
+        logits = torch.logit(policy_probs)
+        return torch.softmax(logits, dim=1)
+        return F.gumbel_softmax(policy_probs)
         # take softmax
-        dist = torch.softmax(logits, dim=1)
-        return dist
+        # dist = torch.softmax(logits, dim=1)
+        # return dist
     
     
     def to_action_distribution(self, raw_action_probs):
@@ -125,7 +143,11 @@ class DeicticActor(nn.Module):
         # action_dist = torch.softmax(values, dim=1)
         
         # action_dist = self.reshape_action_distribution(action_dist)
-        action_dist = self.neural_actor.get_distribution(neural_state).distribution.probs
+        # action_dist = self.neural_actor.get_distribution(neural_state).distribution.probs
+        hidden = self.neural_actor.network(neural_state / 255.0)
+        logits = self.neural_actor.actor(hidden)
+        probs = Categorical(logits=logits)
+        action_dist = probs.probs
         return action_dist
     
     def reshape_action_distribution(self, action_dist):
@@ -152,12 +174,17 @@ class DeicticActorCritic(nn.Module):
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
         # self.neural_actor = module.MLP(has_softmax=True, device=device)
-        self.visual_neural_actor = PPO("MlpPolicy", env.raw_env, verbose=1).policy
+        # self.baseline_ppo = PPO("MlpPolicy", env.raw_env, verbose=1)
+        # self.baseline_ppo = load_pretrained_stable_baseline_ppo(env, device)
+        # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
+        self.visual_neural_actor, self.critic = load_cleanrl_agent(env.raw_env, device)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.meta_actor = get_meta_actor(env, rules, device, train=True)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
         self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, device=device)
-        self.critic = module.MLP(device=device, out_size=1, logic=True)
+        # self.critic = module.MLP(device=device, out_size=1, logic=True)
+        # self.critic = self.baseline_ppo.policy.mlp_extractor.value_net
+        # self.critic.to(device)
         
         # the number of actual actions on the environment
         self.num_actions = len(self.env.pred2action.keys())
@@ -193,7 +220,8 @@ class DeicticActorCritic(nn.Module):
         dist = Categorical(action_probs)
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-        state_values = self.critic(neural_state)
+        # state_values = self.critic(neural_state)
+        state_values = self.visual_neural_actor.get_value(neural_state)
 
         return action_logprobs, state_values, dist_entropy
 
@@ -216,7 +244,7 @@ class DeicticPPO(nn.Module):
         self.policy = DeicticActorCritic(env, rules, device)
         self.optimizer = optimizer([
             {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+            # {'params': self.policy.critic.parameters(), 'lr': lr_critic}
         ])
 
         self.policy_old = DeicticActorCritic(env, rules, device)
@@ -229,7 +257,7 @@ class DeicticPPO(nn.Module):
     def select_action(self, state, epsilon=0.0):
         logic_state, neural_state = state
         logic_state = torch.tensor(logic_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-        neural_state = torch.tensor(neural_state, dtype=torch.float32, device=self.device).unsqueeze(0)
+        neural_state = torch.tensor(neural_state, dtype=torch.float32, device=self.device)#.unsqueeze(0)
 
         # select random action with epsilon probability and policy probiability with 1-epsilon
         with torch.no_grad():
@@ -266,7 +294,9 @@ class DeicticPPO(nn.Module):
 
         # convert list to tensor
 
-        old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0)).detach().to(self.device)
+        # old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0)).detach().to(self.device)
+        old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0), dim=1).detach().to(self.device)
+        # print(old_neural_states.size())
         old_logic_states = torch.squeeze(torch.stack(self.buffer.logic_states, dim=0)).detach().to(self.device)
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)

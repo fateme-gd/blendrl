@@ -207,7 +207,7 @@ class DeicticActorCritic(nn.Module):
         self.upprior = Categorical(
             torch.tensor([0.9] + [0.1 / (self.num_actions-1) for _ in range(self.num_actions-1)], device=device))
         
-        self._print()
+        # self._print()
 
     def _print(self):
         print("==== Meta Policy ====")

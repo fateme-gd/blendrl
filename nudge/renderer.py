@@ -38,6 +38,8 @@ class Renderer:
         self.env = NudgeBaseEnv.from_name("seaquest", mode='deictic', seed=0, **env_kwargs)
         self.env = self.model.env
         self.env.reset()
+        
+        print(self.model._print())
 
         print(f"Playing '{self.model.env.name}' with {'' if deterministic else 'non-'}deterministic policy.")
 

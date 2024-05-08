@@ -108,6 +108,7 @@ def load_model(model_dir,
     # Load the model weights
     with open(checkpoint_path, "rb") as f:
         model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
+    # print(model.logic_actor.im.W)
 
     return model
 

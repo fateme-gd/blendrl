@@ -4,16 +4,17 @@ from typing import Union
 import numpy as np
 import torch as th
 import pygame
+import vidmaker
 
 from nudge.agents.logic_agent import NsfrActorCritic
 from nudge.agents.neural_agent import ActorCritic
 from nudge.utils import load_model, yellow
+from nudge.env import NudgeBaseEnv
 
 SCREENSHOTS_BASE_PATH = "out/screenshots/"
 PREDICATE_PROBS_COL_WIDTH = 300
 CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
-
 
 class Renderer:
     model: Union[NsfrActorCritic, ActorCritic]
@@ -34,6 +35,7 @@ class Renderer:
 
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
+        self.env = NudgeBaseEnv.from_name("seaquest", mode='deictic', seed=0, **env_kwargs)
         self.env = self.model.env
         self.env.reset()
 
@@ -63,6 +65,8 @@ class Renderer:
         self.fast_forward = False
         self.reset = False
         self.takeover = False
+        
+        self.video = vidmaker.Video("vidmaker.mp4", late_export=True)
 
     def _init_pygame(self):
         pygame.init()
@@ -81,23 +85,32 @@ class Renderer:
         ret = 0
 
         obs, obs_nn = self.env.reset()
+        obs_nn = th.tensor(obs_nn, device=self.model.device) 
+        print(obs_nn.shape)
 
         while self.running:
             self.reset = False
-            self._handle_user_input()
+            # self._handle_user_input()
+
+            self.video.update(pygame.surfarray.pixels3d(self.window).swapaxes(0, 1), inverted=False) # THIS LINE
 
             if not self.running:
                 break  # outer game loop
 
             if self.takeover:  # human plays game manually
-                action = self._get_action()
-                self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
+                assert False, "Unimplemented."
+                # action = self._get_action()
+                # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
             else:  # AI plays the game
-                action, _ = self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
+                # print("obs_nn: ", obs_nn.shape)
+                action, logprob = self.model.act(obs_nn, th.unsqueeze(obs, 0))  # update the model's internals
+                # state = (obs_nn, th.unsqueeze(obs, 0))
+                # action = self.model.select_action(state)  # update the model's internals
                 # action, _ = self.model.act(th.unsqueeze(obs, 0))
-                action = self.predicates[action.item()]
+                # action = self.predicates[action.item()]
 
             (new_obs, new_obs_nn), reward, done = self.env.step(action, is_mapped=self.takeover)
+            new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
             
             self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
             # print(self.model.actor.logic_actor.V_T)
@@ -173,6 +186,7 @@ class Renderer:
         self.window.fill((20, 20, 20))  # clear the entire window
         self._render_env()
         if self.render_predicate_probs:
+            self._render_policy_probs()
             self._render_predicate_probs()
 
         pygame.display.flip()
@@ -200,12 +214,40 @@ class Renderer:
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))
 
+    def _render_policy_probs(self):
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        model = self.model
+        # nsfr = self.nsfr_reasoner
+        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
+        policy_names = ['neural', 'logic']
+        weights = model.get_policy_weights()
+        print(weights)
+        for i, w_i in enumerate(weights):
+            w_i = w_i.item()
+            name = policy_names[i]
+            # Render cell background
+            color = w_i * CELL_BACKGROUND_HIGHLIGHT + (1 - w_i) * CELL_BACKGROUND_DEFAULT
+            pygame.draw.rect(self.window, color, [
+                anchor[0] - 2,
+                anchor[1] - 2 + i * 35,
+                PREDICATE_PROBS_COL_WIDTH - 12,
+                28
+            ])
+            # print(w_i, name)
+
+            text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
+            self.window.blit(text, text_rect)
+        
     def _render_predicate_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
 
         nsfr = self.nsfr_reasoner
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
+            i += 2
             # Render cell background
             color = val * CELL_BACKGROUND_HIGHLIGHT + (1 - val) * CELL_BACKGROUND_DEFAULT
             pygame.draw.rect(self.window, color, [

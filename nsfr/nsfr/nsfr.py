@@ -76,12 +76,12 @@ class NSFReasoner(nn.Module):
         # a = self.im.W
         Ws_softmaxed = torch.softmax(self.im.W, 1)
         
-        print("Raw rule weights: ")
-        print(self.im.W)
-        print("Softmaxed rule weights: ")
-        print(Ws_softmaxed)
+        # print("Raw rule weights: ")
+        # print(self.im.W)
+        # print("Softmaxed rule weights: ")
+        # print(Ws_softmaxed)
 
-        print("Summary: ")
+        # print("Summary: ")
         for i, W_ in enumerate(Ws_softmaxed):
             max_i = np.argmax(W_.detach().cpu().numpy())
             print('C_' + str(i) + ': ',

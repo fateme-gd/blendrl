@@ -104,7 +104,7 @@ def main(algorithm: str,
     env = NudgeBaseEnv.from_name(environment, mode=algorithm, seed=seed, **env_kwargs)
 
     now = datetime.now()
-    experiment_dir = OUT_PATH / "runs" / environment / algorithm / now.strftime("%y-%m-%d-%H-%M")
+    experiment_dir = OUT_PATH / "runs" / environment / algorithm # / now.strftime("%y-%m-%d-%H-%M")
     checkpoint_dir = experiment_dir / "checkpoints"
     image_dir = experiment_dir / "images"
     log_dir = experiment_dir

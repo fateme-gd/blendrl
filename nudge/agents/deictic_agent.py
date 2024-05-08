@@ -192,7 +192,7 @@ class DeicticActorCritic(nn.Module):
         # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
         self.visual_neural_actor, self.critic = load_cleanrl_agent(env.raw_env, device)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.meta_actor = get_meta_actor(env, rules, device, train=False)
+        self.meta_actor = get_meta_actor(env, rules, device, train=True)#train=False)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
         self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, device=device)
         # self.critic = module.MLP(device=device, out_size=1, logic=True)
@@ -207,7 +207,6 @@ class DeicticActorCritic(nn.Module):
         self.upprior = Categorical(
             torch.tensor([0.9] + [0.1 / (self.num_actions-1) for _ in range(self.num_actions-1)], device=device))
         
-        # self._print()
 
     def _print(self):
         print("==== Meta Policy ====")

@@ -106,7 +106,7 @@ def main(algorithm: str,
     env = NudgeBaseEnv.from_name(environment, mode=algorithm, seed=seed, **env_kwargs)
 
     now = datetime.now()
-    experiment_dir = OUT_PATH / "runs" / environment / algorithm / now.strftime("%y-%m-%d-%H-%M")
+    experiment_dir = OUT_PATH / "runs" / environment / algorithm #/ now.strftime("%y-%m-%d-%H-%M")
     checkpoint_dir = experiment_dir / "checkpoints"
     image_dir = experiment_dir / "images"
     log_dir = experiment_dir
@@ -123,6 +123,7 @@ def main(algorithm: str,
         # neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
         # logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
         agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        agent.policy._print()
         # agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
     elif algorithm == "ppo":
         agent = NeuralPPO(env, lr_actor, lr_critic, optimizer,
@@ -217,6 +218,7 @@ def main(algorithm: str,
                 
                 action_stats = get_action_stats(env, action_history)
                 # print(action_stats)
+                agent.policy._print()
 
             # save model weights
             if time_step % save_steps == 1:

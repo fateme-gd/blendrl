@@ -44,7 +44,10 @@ def get_meta_nsfr_model(env_name: str, rules: str, device: str, train=False, mod
     for clause in clauses:
         if clause.head.pred.name not in prednames:
             prednames.append(clause.head.pred.name)
-    m = len(prednames)
+    if train:
+        m = len(prednames)
+    else:
+        m = len(clauses)
     # m = 5
     IM = build_infer_module(clauses, atoms, lang, m=m, infer_step=2, train=train, device=device)
     # Neuro-Symbolic Forward Reasoner

@@ -7,6 +7,8 @@ from inspect import signature
 from pathlib import Path
 from typing import Callable
 
+import torch
+import random
 import numpy as np
 import yaml
 from rtpt import RTPT
@@ -49,8 +51,8 @@ def main(algorithm: str,
          lr_critic: float = 3e-4,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
-         save_steps: int = 250000,
-         stats_steps: int = 2000,
+         save_steps: int = 25000,
+         stats_steps: int = 2500,
          ):
     """
 
@@ -80,8 +82,16 @@ def main(algorithm: str,
         stats_steps: Number of steps between each statistics summary timestamp
     """
 
-    make_deterministic(seed)
+    # make_deterministic(seed)
 
+    # make_deterministic(seed)
+    # TRY NOT TO MODIFY: seeding
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    
+    
     assert algorithm in ['ppo', 'logic', 'deictic']
 
     if env_kwargs is None:
@@ -206,7 +216,7 @@ def main(algorithm: str,
                 wandb.log({"avg_return": avg_return, "time_step": time_step})
                 
                 action_stats = get_action_stats(env, action_history)
-                print(action_stats)
+                # print(action_stats)
 
             # save model weights
             if time_step % save_steps == 1:
@@ -222,6 +232,7 @@ def main(algorithm: str,
 
         running_ret += ret
         i_episode += 1
+        wandb.log({"episodic_return": ret, "time_step": i_episode})
         writer.add_scalar('Return', ret, i_episode)
         writer.add_scalar('Epsilon', epsilon, i_episode)
 

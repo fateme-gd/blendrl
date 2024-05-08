@@ -47,7 +47,7 @@ class InferModule(nn.Module):
         #     str(m) + ' and ' + str(self.C)
 
     def init_identity_weights(self, device):
-        ones = torch.ones((self.C,), dtype=torch.float32) * 100
+        ones = torch.ones((self.C,), dtype=torch.float32) * 10
         return torch.diag(ones).to(device)
 
     def forward(self, x):

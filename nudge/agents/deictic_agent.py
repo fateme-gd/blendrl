@@ -33,7 +33,7 @@ class DeicticActor(nn.Module):
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
     def _build_action_id_dict(self):
-        env_action_names = list(self.env.pred2action.keys())        
+        env_action_names = list(self.env.pred2action.keys())
         # action_probs = torch.zeros(len(env_action_names))
         env_action_id_to_action_pred_indices = {}
         # init dic
@@ -41,12 +41,21 @@ class DeicticActor(nn.Module):
             env_action_id_to_action_pred_indices[i] = []
             
         for i, env_action_name in enumerate(env_action_names):
+            exist_flag = False
             for j,action_pred_name in enumerate(self.logic_actor.get_prednames()):
                 if env_action_name in action_pred_name:
                     #if i not in env_action_id_to_action_pred_indices:
                     #    env_action_id_to_action_pred_indices[i] = []
                     env_action_id_to_action_pred_indices[i].append(j)
-                    # torch.tensor([0.0], device=self.device)
+                    exist_flag = True
+            if not exist_flag:
+                # i-th env action is not defined by any rules thus will be always 0.0
+                # refer to dummy predicte index
+                # pred1, pred2, ..., predn, dummy_pred
+                dummy_index = len(self.logic_actor.get_prednames())
+                env_action_id_to_action_pred_indices[i].append(dummy_index)
+
+                
         return env_action_id_to_action_pred_indices
         
     def compute_action_probs(self, neural_state, logic_state):
@@ -67,7 +76,7 @@ class DeicticActor(nn.Module):
         
         # B * 2
         weights = self.to_meta_policy_distribution(logic_state)
-        print("neural: {}, logic: {}".format(weights[:,0], weights[:,1]))
+        # print("neural: {}, logic: {}".format(weights[:,0], weights[:,1]))
         n_actions = neural_action_probs.size(1)
         
         # B * N_actions * 2
@@ -97,9 +106,9 @@ class DeicticActor(nn.Module):
         # get prob for neural and logic policy
         # probs = extract_policy_probs(self.meta_actor, V_T, self.device)
         # to logit
-        logits = torch.logit(policy_probs)
-        return torch.softmax(logits, dim=1)
-        return F.gumbel_softmax(policy_probs)
+        logits = torch.logit(policy_probs, eps=0.01)
+        # return torch.softmax(logits, dim=1)
+        return F.gumbel_softmax(logits, dim=1)
         # take softmax
         # dist = torch.softmax(logits, dim=1)
         # return dist
@@ -107,14 +116,15 @@ class DeicticActor(nn.Module):
     
     def to_action_distribution(self, raw_action_probs):
         """Converts raw action probabilities to a distribution."""
-        #TODO: Implement this method
         
         
         batch_size = raw_action_probs.size(0)
         env_action_names = list(self.env.pred2action.keys())        
         
         # action_probs = torch.zeros(len(env_action_names))
-                
+
+        # TODO: put dummy value to TAIL in case of no action predicate
+        raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
         dist_values = []
         for i in range(len(env_action_names)):
             if i in self.env_action_id_to_action_pred_indices:
@@ -179,7 +189,7 @@ class DeicticActorCritic(nn.Module):
         # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
         self.visual_neural_actor, self.critic = load_cleanrl_agent(env.raw_env, device)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.meta_actor = get_meta_actor(env, rules, device, train=True)
+        self.meta_actor = get_meta_actor(env, rules, device, train=False)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
         self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, device=device)
         # self.critic = module.MLP(device=device, out_size=1, logic=True)
@@ -193,7 +203,14 @@ class DeicticActorCritic(nn.Module):
             torch.tensor([1.0 / self.num_actions for _ in range(self.num_actions)], device=device))
         self.upprior = Categorical(
             torch.tensor([0.9] + [0.1 / (self.num_actions-1) for _ in range(self.num_actions-1)], device=device))
+        
+        self._print()
 
+    def _print(self):
+        print("==== Meta Policy ====")
+        self.meta_actor.print_program()
+        print("==== Logic Policy ====")
+        self.logic_actor.print_program()
         
     def forward(self):
         raise NotImplementedError

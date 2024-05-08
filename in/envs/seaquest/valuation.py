@@ -79,7 +79,7 @@ def close_by_missile(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = (abs(player_x - obj_x) < 32) & (abs(player_y - obj_y) < 32)
+    result = (abs(player_x - obj_x) < 64) & (abs(player_y - obj_y) < 64)
     return bool_to_probs(result)
 
 
@@ -88,7 +88,7 @@ def close_by_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = (abs(player_x - obj_x) < 32) & (abs(player_y - obj_y) < 32)
+    result = (abs(player_x - obj_x) < 64) & (abs(player_y - obj_y) < 64)
     return bool_to_probs(result)
 
 
@@ -97,7 +97,7 @@ def close_by_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = (abs(player_x - obj_x) < 32) & (abs(player_y - obj_y) < 32)
+    result = (abs(player_x - obj_x) < 64) & (abs(player_y - obj_y) < 64)
     return bool_to_probs(result)
 
 

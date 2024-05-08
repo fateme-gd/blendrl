@@ -82,6 +82,9 @@ def load_cleanrl_envs(env_id, run_name=None, capture_video=False, num_envs=1):
 def load_cleanrl_agent(envs, device):
     from cleanrl.cleanrl.ppo_atari import Agent
     agent = Agent(envs) #, device=device, verbose=1)
-    agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth"))
-    agent.to(device)
+    try:
+        agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth"))
+        agent.to(device)
+    except RuntimeError:
+        agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth", map_location=torch.device('cpu')))
     return agent, agent

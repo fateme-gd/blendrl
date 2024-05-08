@@ -54,9 +54,9 @@ class Renderer:
             self.keys2actions = None
         self.current_keys_down = set()
 
-        self.nsfr_reasoner = self.model.actor.logic_actor
-        self.nsfr_reasoner.print_program()
-        self.predicates = self.nsfr_reasoner.prednames
+        # self.nsfr_reasoner = self.model.actor.logic_actor
+        # self.nsfr_reasoner.print_program()
+        self.predicates = self.model.logic_actor.prednames
 
         self._init_pygame()
 
@@ -244,7 +244,8 @@ class Renderer:
     def _render_predicate_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
 
-        nsfr = self.nsfr_reasoner
+        # nsfr = self.nsfr_reasoner
+        nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         for i, (pred, val) in enumerate(pred_vals.items()):
             i += 2

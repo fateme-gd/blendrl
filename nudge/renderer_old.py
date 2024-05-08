@@ -52,9 +52,9 @@ class Renderer:
             self.keys2actions = None
         self.current_keys_down = set()
 
-        self.nsfr_reasoner = self.model.actor.logic_actor
-        self.nsfr_reasoner.print_program()
-        self.predicates = self.nsfr_reasoner.prednames
+        # self.nsfr_reasoner = self.model.actor.logic_actor
+        # self.nsfr_reasoner.print_program()
+        self.predicates = self.nsfr_model.prednames
 
         self._init_pygame()
 

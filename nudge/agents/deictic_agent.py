@@ -76,14 +76,16 @@ class DeicticActor(nn.Module):
         
         # B * 2
         weights = self.to_meta_policy_distribution(logic_state)
+        # save weights
+        self.w_policy = weights[0]
+        
         # print("neural: {}, logic: {}".format(weights[:,0], weights[:,1]))
         n_actions = neural_action_probs.size(1)
         
         # B * N_actions * 2
         weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
-        # print(weights)
         
-        self.w_policy = weights
+        # print(weights)
         
         # p = w1 * p_neural + w2 * p_logic
         
@@ -93,6 +95,7 @@ class DeicticActor(nn.Module):
         # action_probs = torch.softmax(merged_values, dim=0)
         return action_probs
     
+
     def select_policy(self, neural_state, logic_state):
         V_T_meta = self.meta_actor(logic_state)
         policy_probs = self.to_policy_distribution(V_T_meta)
@@ -212,6 +215,9 @@ class DeicticActorCritic(nn.Module):
         print("==== Logic Policy ====")
         self.logic_actor.print_program()
         
+    def get_policy_weights(self):
+        return self.actor.w_policy
+    
     def forward(self):
         raise NotImplementedError
     

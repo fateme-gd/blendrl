@@ -22,8 +22,37 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 )
 
 # added
+from nudge.agents.deictic_agent import DeicticPPO, DeicticActorCritic
+from nudge.env import NudgeBaseEnv
+import csv
+import os
+import sys
+import time
+from datetime import datetime
+from inspect import signature
+from pathlib import Path
+from typing import Callable
+
+import torch
+import random
+import numpy as np
+import yaml
+from rtpt import RTPT
+from torch.optim import Optimizer, Adam
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
+
+from nudge.agents.logic_agent import LogicPPO
+from nudge.agents.neural_agent import NeuralPPO
 from nudge.agents.deictic_agent import DeicticPPO
 from nudge.env import NudgeBaseEnv
+from nudge.utils import make_deterministic, save_hyperparams
+from nudge.utils import exp_decay, get_action_stats
+
+# Log in to your W&B account
+import wandb
+OUT_PATH = Path("out/")
+IN_PATH = Path("in/")
 
 @dataclass
 class Args:
@@ -35,7 +64,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = False
+    track: bool = True
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -45,7 +74,7 @@ class Args:
     """whether to capture videos of the agent performances (check out `videos` folder)"""
 
     # Algorithm specific arguments
-    env_id: str = "BreakoutNoFrameskip-v4"
+    env_id: str = "Seaquest-v4"
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
@@ -94,78 +123,90 @@ class Args:
     
 
 
-def make_env(env_id, idx, capture_video, run_name):
-    def thunk():
-        if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            env = gym.make(env_id)
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = NoopResetEnv(env, noop_max=30)
-        # env = MaxAndSkipEnv(env, skip=4)
-        # env = EpisodicLifeEnv(env)
-        # if "FIRE" in env.unwrapped.get_action_meanings():
-        #     env = FireResetEnv(env)
-        # env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
-        # env = gym.wrappers.FrameStack(env, 1)
-        return env
+# def make_env(env_id, idx, capture_video, run_name):
+#     def thunk():
+#         if capture_video and idx == 0:
+#             env = gym.make(env_id, render_mode="rgb_array")
+#             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+#         else:
+#             env = gym.make(env_id)
+#         env = gym.wrappers.RecordEpisodeStatistics(env)
+#         # env = NoopResetEnv(env, noop_max=30)
+#         # env = MaxAndSkipEnv(env, skip=4)
+#         # env = EpisodicLifeEnv(env)
+#         # if "FIRE" in env.unwrapped.get_action_meanings():
+#         #     env = FireResetEnv(env)
+#         # env = ClipRewardEnv(env)
+#         env = gym.wrappers.ResizeObservation(env, (84, 84))
+#         env = gym.wrappers.GrayScaleObservation(env)
+#         env = gym.wrappers.FrameStack(env, 4)
+#         # env = gym.wrappers.FrameStack(env, 1)
+#         return env
 
-    return thunk
-
-
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
+#     return thunk
 
 
-class Agent(nn.Module):
-    def __init__(self, envs):
-        super().__init__()
-        self.network = nn.Sequential(
-            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
-            nn.ReLU(),
-            nn.Flatten(),
-            layer_init(nn.Linear(64 * 7 * 7, 512)),
-            nn.ReLU(),
-        )
-        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
-        self.critic = layer_init(nn.Linear(512, 1), std=1)
-
-    def get_value(self, x):
-        return self.critic(self.network(x / 255.0))
-
-    def get_action_and_value(self, x, action=None):
-        hidden = self.network(x / 255.0)
-        logits = self.actor(hidden)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+# def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+#     torch.nn.init.orthogonal_(layer.weight, std)
+#     torch.nn.init.constant_(layer.bias, bias_const)
+#     return layer
 
 
-if __name__ == "__main__":
-    import sys
-    import yaml
-    from pathlib import Path
-    OUT_PATH = Path("out/")
-    IN_PATH = Path("in/")
-    if len(sys.argv) > 1:
-        config_path = sys.argv[1]
-    else:
-        config_path = IN_PATH / "config" / "default.yaml"
+# class Agent(nn.Module):
+#     def __init__(self, envs):
+#         super().__init__()
+#         self.network = nn.Sequential(
+#             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
+#             nn.ReLU(),
+#             layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+#             nn.ReLU(),
+#             layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+#             nn.ReLU(),
+#             nn.Flatten(),
+#             layer_init(nn.Linear(64 * 7 * 7, 512)),
+#             nn.ReLU(),
+#         )
+#         self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
+#         self.critic = layer_init(nn.Linear(512, 1), std=1)
 
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.Loader)
-        
+#     def get_value(self, x):
+#         return self.critic(self.network(x / 255.0))
+
+#     def get_action_and_value(self, x, action=None):
+#         hidden = self.network(x / 255.0)
+#         logits = self.actor(hidden)
+#         probs = Categorical(logits=logits)
+#         if action is None:
+#             action = probs.sample()
+#         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+
+
+
+def main(algorithm: str,
+         environment: str,
+         env_kwargs: dict = None,
+         rules: str = "default",
+         seed: int = 0,
+         device: str = "cpu",
+         total_steps: int = 10000000,
+         max_ep_len: int = 2000,
+         update_steps: int = None,
+         epochs: int = 20,
+         eps_clip: float = 0.2,
+         gamma: float = 0.99,
+         optimizer: Optimizer = Adam,
+         # lr_actor: float = 0.001,
+         lr_actor: float = 2.5e-4,#1e-3,
+         # lr_critic: float = 0.0003,
+         lr_critic: float = 2.5e-4,
+         epsilon_fn: Callable = exp_decay,
+         recover: bool = False,
+         save_steps: int = 25000,
+         stats_steps: int = 2500,
+         label: str = "meta_neural",
+         meta_mode: str = "neural",
+         actor_mode: str = "hybrid"
+         ):
         
     args = tyro.cli(Args)
     args.batch_size = int(args.num_envs * args.num_steps)
@@ -212,23 +253,32 @@ if __name__ == "__main__":
 
     # agent = Agent(envs).to(device)
     #### instantiate deictic agent
-    lr_actor = 1e-3
-    lr_critic = 1e-4
-    gamma = 0.99
-    epochs = 20
-    eps_clip = 0.2
-    optimizer = None
-    learning_rate: float = 2.5e-4
-    rules= "seaquest"
-    agent = DeicticPPO(envs, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+    # lr_actor = 1e-3
+    # lr_critic = 1e-4
+    # gamma = 0.99
+    # epochs = 20
+    # eps_clip = 0.2
+    # optimizer = None
+    # learning_rate: float = 2.5e-4
+    # rules= "default"
+    # actor_mode = "neural"
+    # meta_mode = "neural"
+    # agent = DeicticPPO(envs, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
+    agent = DeicticActorCritic(envs, rules, actor_mode, meta_mode, device)
     #####
     
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
 
     # ALGO Logic: Storage setup
-    obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    observation_space = (4, 84, 84)
+    logic_observation_space = (84, 51, 4)
+    action_space = ()
+    # obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
+    # actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
+    obs = torch.zeros((args.num_steps, args.num_envs) + observation_space).to(device)
+    logic_obs = torch.zeros((args.num_steps, args.num_envs) + logic_observation_space).to(device)
+    actions = torch.zeros((args.num_steps, args.num_envs) + action_space).to(device)
     logprobs = torch.zeros((args.num_steps, args.num_envs)).to(device)
     rewards = torch.zeros((args.num_steps, args.num_envs)).to(device)
     dones = torch.zeros((args.num_steps, args.num_envs)).to(device)
@@ -237,8 +287,11 @@ if __name__ == "__main__":
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     start_time = time.time()
-    next_obs, _ = envs.reset(seed=args.seed)
-    next_obs = torch.Tensor(next_obs).to(device)
+    next_logic_obs, next_obs = envs.reset()#(seed=seed)
+    next_logic_obs = next_logic_obs.to(device)
+    next_obs = next_obs.to(device)
+    # next_obs = torch.Tensor(next_obs).to(device)
+    # next_logic_obs = torch.Tensor(next_logic_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
     for iteration in range(1, args.num_iterations + 1):
@@ -255,16 +308,21 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
-                action, logprob, _, value = agent.get_action_and_value(next_obs)
+                action, logprob, _, value = agent.get_action_and_value(next_obs, next_logic_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            # next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
+            _state, reward, terminations, truncations, infos  = envs.step(action.cpu().numpy())
+            terminations = np.array([terminations])
+            truncations = np.array([truncations])
+            
+            next_logic_obs, next_obs = _state
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
-            next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+            next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
@@ -275,7 +333,7 @@ if __name__ == "__main__":
 
         # bootstrap value if not done
         with torch.no_grad():
-            next_value = agent.get_value(next_obs).reshape(1, -1)
+            next_value = agent.get_value(next_obs, next_logic_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(args.num_steps)):
@@ -290,9 +348,12 @@ if __name__ == "__main__":
             returns = advantages + values
 
         # flatten the batch
-        b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+        # b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+        b_obs = obs.reshape((-1,) + observation_space)
+        b_logic_obs = logic_obs.reshape((-1,) + logic_observation_space)
         b_logprobs = logprobs.reshape(-1)
-        b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+        # b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+        b_actions = actions.reshape((-1,) + action_space)
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
@@ -367,10 +428,24 @@ if __name__ == "__main__":
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
         
-        save_path = "out/deictic_ppo_{}.pth".format(args.env_id)
-        torch.save(agent.state_dict(), save_path)
-        print("Agent has been saved to {}".format(save_path))
+        # save_path = "out/deictic_ppo_{}.pth".format(args.env_id)
+        # torch.save(agent.state_dict(), save_path)
+        # print("Agent has been saved to {}".format(save_path))
 
 
     envs.close()
     writer.close()
+
+
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        config_path = sys.argv[1]
+    else:
+        config_path = IN_PATH / "config" / "default.yaml"
+
+    with open(config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+
+    main(**config)

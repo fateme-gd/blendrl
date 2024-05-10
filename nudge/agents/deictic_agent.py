@@ -278,6 +278,25 @@ class DeicticActorCritic(nn.Module):
     def get_prednames(self):
         return self.actor.get_prednames()
     
+    def get_action_and_value(self, neural_state, logic_state):
+        # compute action
+        action_probs = self.actor(neural_state, logic_state)
+        dist = Categorical(action_probs)
+        action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
+        if torch.numel(action) > 1:
+            action = action[0]
+        logprob = dist.log_prob(action)
+        
+        # compute value
+        value = self.visual_neural_actor.get_value(neural_state)
+        
+        # action, action_logprob = self.act(neural_state, logic_state, epsilon=epsilon)
+        return action, logprob, dist.entropy(), value
+    
+    def get_value(self, neural_state, logic_state):
+        value = self.visual_neural_actor.get_value(neural_state)
+        return value
+
 
 class DeicticPPO(nn.Module):
     # def __init__(self, env: NudgeBaseEnv, rules: str, lr_actor, lr_critic, optimizer,

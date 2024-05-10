@@ -63,7 +63,9 @@ class NudgeEnv(NudgeBaseEnv):
         # if not is_mapped:
         #     action = self.map_action(action)
         # step RAM env
-        obs, reward, done, _, _ = self.env.step(action)
+        # obs, reward, done, _, _ = self.env.step(action)
+        obs, reward, done, truncations, infos = self.env.step(action)
+        
         # ste RGB env
         # x = self.raw_env.step(action.unsqueeze(0)) 
         # raw_obs, raw_reward, raw_done, _, _ = x
@@ -73,7 +75,7 @@ class NudgeEnv(NudgeBaseEnv):
         raw_state = self.env.dqn_obs
         # raw_state = raw_obs
         # raw_state = raw_state.unsqueeze(0)
-        return self.convert_state(state, raw_state), reward, done
+        return self.convert_state(state, raw_state), reward, done, truncations, infos
 
     def extract_logic_state(self, input_state):
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)

@@ -23,12 +23,14 @@ from utils import get_meta_actor, extract_policy_probs, load_pretrained_stable_b
 from stable_baselines3 import PPO
 
 class DeicticActor(nn.Module):
-    def __init__(self, env, neural_actor, logic_actor, meta_actor, device=None):
+    def __init__(self, env, neural_actor, logic_actor, meta_actor, actor_mode, meta_mode, device=None):
         super(DeicticActor, self).__init__()
         self.env = env
         self.neural_actor = neural_actor
         self.logic_actor = logic_actor
         self.meta_actor = meta_actor
+        self.actor_mode = actor_mode
+        self.meta_mode = meta_mode
         self.device = device
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
@@ -58,7 +60,7 @@ class DeicticActor(nn.Module):
                 
         return env_action_id_to_action_pred_indices
         
-    def compute_action_probs(self, neural_state, logic_state):
+    def compute_action_probs_hybrid(self, neural_state, logic_state):
         # logic_action_probs = self.logic_a2c.actor(logic_state)
         # neural_action_probs = self.neural_a2c.actor(neural_state)
         # state: B * N
@@ -75,7 +77,7 @@ class DeicticActor(nn.Module):
         # ones = torch.ones_like(beta).to(self.device)
         
         # B * 2
-        weights = self.to_meta_policy_distribution(logic_state)
+        weights = self.to_meta_policy_distribution(neural_state, logic_state)
         # save weights
         self.w_policy = weights[0]
         
@@ -95,20 +97,37 @@ class DeicticActor(nn.Module):
         # action_probs = torch.softmax(merged_values, dim=0)
         return action_probs
     
+    def compute_action_probs_logic(self, logic_state):
+        self.w_policy = torch.tensor([0.0, 1.0], device=self.device)
+        logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
+        return logic_action_probs
+    
+    def compute_action_probs_neural(self, neural_state):
+        self.w_policy = torch.tensor([1.0, 0.0], device=self.device)
+        neural_action_probs = self.to_neural_action_distribution(neural_state)
+        return neural_action_probs
 
-    def select_policy(self, neural_state, logic_state):
-        V_T_meta = self.meta_actor(logic_state)
-        policy_probs = self.to_policy_distribution(V_T_meta)
-        return policy_probs
+
+    
+
+    # def select_policy(self, neural_state, logic_state):
+    #     V_T_meta = self.meta_actor(logic_state)
+    #     policy_probs = self.to_policy_distribution(V_T_meta)
+    #     return policy_probs
         # policy_select_vector = F.gumbel_softmax(policy_probs)
         # return policy_select_vector
         
         
-    def to_meta_policy_distribution(self, logic_state):
-        policy_probs = self.meta_actor(logic_state)
+    def to_meta_policy_distribution(self, neural_state, logic_state):
         # get prob for neural and logic policy
         # probs = extract_policy_probs(self.meta_actor, V_T, self.device)
         # to logit
+        assert self.meta_mode in ['logic', 'neural'], "Invalid meta mode {}".format(self.meta_mode)
+        if self.meta_mode == 'logic':
+            policy_probs = self.meta_actor(logic_state)
+        else:
+            policy_probs = self.meta_actor(neural_state)
+            
         logits = torch.logit(policy_probs, eps=0.01)
         # return torch.softmax(logits, dim=1)
         return F.gumbel_softmax(logits, dim=1)
@@ -171,15 +190,23 @@ class DeicticActor(nn.Module):
         return action_dist
     
     def forward(self, neural_state, logic_state):
-        return self.compute_action_probs(neural_state, logic_state)
+        assert self.actor_mode in ["hybrid", "logic", "neural"], "Invalid actor mode {}".format(self.actor_mode) 
+        if self.actor_mode == "hybrid":
+            return self.compute_action_probs_hybrid(neural_state, logic_state)
+        elif self.actor_mode == "logic":
+            return self.compute_action_probs_logic(logic_state)
+        else:
+            return self.compute_action_probs_neural(neural_state)
+    
         
 
 class DeicticActorCritic(nn.Module):
-    def __init__(self, env, rules, device, rng=None):
+    def __init__(self, env, rules, actor_mode, meta_mode, device, rng=None):
         super(DeicticActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
-        
+        self.actor_mode = actor_mode
+        self.meta_mode = meta_mode
         # self.neural_a2c = ActorCritic(env, device=device)
         # self.logic_a2c = NsfrActorCritic(env, rules, device=device)
         self.env = env
@@ -190,11 +217,11 @@ class DeicticActorCritic(nn.Module):
         # self.baseline_ppo = PPO("MlpPolicy", env.raw_env, verbose=1)
         # self.baseline_ppo = load_pretrained_stable_baseline_ppo(env, device)
         # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
-        self.visual_neural_actor, self.critic = load_cleanrl_agent(env.raw_env, device)
+        self.visual_neural_actor, self.critic = load_cleanrl_agent(env=env.raw_env, pretrained=False, device=device)
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.meta_actor = get_meta_actor(env, rules, device, train=True)#train=False)
+        self.meta_actor = get_meta_actor(env, rules, device, train=True, meta_mode=meta_mode)#train=False)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
-        self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, device=device)
+        self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, actor_mode, meta_mode, device=device)
         # self.critic = module.MLP(device=device, out_size=1, logic=True)
         # self.critic = self.baseline_ppo.policy.mlp_extractor.value_net
         # self.critic.to(device)
@@ -209,8 +236,9 @@ class DeicticActorCritic(nn.Module):
         
 
     def _print(self):
-        print("==== Meta Policy ====")
-        self.meta_actor.print_program()
+        if self.meta_mode == 'logic':
+            print("==== Meta Policy ====")
+            self.meta_actor.print_program()
         print("==== Logic Policy ====")
         self.logic_actor.print_program()
         
@@ -254,27 +282,35 @@ class DeicticActorCritic(nn.Module):
 class DeicticPPO(nn.Module):
     # def __init__(self, env: NudgeBaseEnv, rules: str, lr_actor, lr_critic, optimizer,
     #              gamma, epochs, eps_clip, device=None):
-    def __init__(self, env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device):
+    def __init__(self, env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device):
         super(DeicticPPO, self).__init__()
         self.device = device
+        self.actor_mode = actor_mode
+        self.meta_mode = meta_mode
         # self.logic_ppo = LogicPPO(*logic_ppo_params)
         # self.neural_ppo = NeuralPPO(*neural_ppo_params)
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.epochs = epochs
         self.buffer = RolloutBuffer()
-        self.policy = DeicticActorCritic(env, rules, device)
+        self.policy = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
         self.optimizer = optimizer([
-            {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-            # {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+            {'params': self.policy.logic_actor.parameters(), 'lr': lr_actor},
+            {'params': self.policy.meta_actor.parameters(), 'lr': lr_actor},
+            # {'params': self.policy.actor.parameters(), 'lr': lr_actor},
+            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
         ])
 
-        self.policy_old = DeicticActorCritic(env, rules, device)
+        self.policy_old = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.prednames = self.get_prednames()
 
         self.MseLoss = nn.MSELoss()
+        # self._freeze_neural_actor()
+        
+    # def get_action_and_value(next_obs):
+    #     neural_obs, logic_obs = next_obs
     
     def select_action(self, state, epsilon=0.0):
         logic_state, neural_state = state
@@ -323,6 +359,7 @@ class DeicticPPO(nn.Module):
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
 
+        total_loss = 0
         # Optimize policy for K epochs
         for _ in range(self.epochs):
             # Evaluating old actions and values
@@ -347,6 +384,7 @@ class DeicticPPO(nn.Module):
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
+            total_loss += loss.mean().item()
             # for name, param in self.policy.named_parameters():
             #     print(name, param.grad)
             self.optimizer.step()
@@ -357,6 +395,9 @@ class DeicticPPO(nn.Module):
 
         # clear buffer
         self.buffer.clear()
+        
+        avg_loss = total_loss / self.epochs
+        return avg_loss
         
         
     def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):
@@ -389,6 +430,12 @@ class DeicticPPO(nn.Module):
 
     def get_prednames(self):
         return self.policy.logic_actor.get_prednames()
+    
+    def _freeze_neural_actor(self):
+        for param in self.policy.visual_neural_actor.parameters():
+            param.requires_grad = False
+        for param in self.policy_old.visual_neural_actor.parameters():
+            param.requires_grad = False
 
 
         

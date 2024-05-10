@@ -55,6 +55,9 @@ def main(algorithm: str,
          recover: bool = False,
          save_steps: int = 250000,
          stats_steps: int = 2500,
+         label: str = "meta_neural",
+         meta_mode: str = "neural",
+         actor_mode: str = "hybrid"
          ):
     """
 
@@ -120,7 +123,7 @@ def main(algorithm: str,
     if algorithm == "deictic":
         # neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
         # logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
-        agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
         # agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
     elif algorithm == "ppo":
         agent = NeuralPPO(env, lr_actor, lr_critic, optimizer,

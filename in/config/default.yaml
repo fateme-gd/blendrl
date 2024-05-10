@@ -1,5 +1,9 @@
 algorithm: deictic
 environment: seaquest
 rules: default
-update_steps: 100
+update_steps: 128
 device: cuda:0
+lr_actor: 2.5e-4
+lr_critic: 2.5e-4
+label: neural
+actor_mode: neural

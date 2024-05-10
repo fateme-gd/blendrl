@@ -28,9 +28,9 @@ import wandb
 wandb.login()
 
 
+
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
-
 
 def main(algorithm: str,
          environment: str,
@@ -38,21 +38,24 @@ def main(algorithm: str,
          rules: str = "default",
          seed: int = 0,
          device: str = "cpu",
-         total_steps: int = 800000,
-         max_ep_len: int = 500,
+         total_steps: int = 10000000,
+         max_ep_len: int = 2000,
          update_steps: int = None,
          epochs: int = 20,
          eps_clip: float = 0.2,
          gamma: float = 0.99,
          optimizer: Optimizer = Adam,
          # lr_actor: float = 0.001,
-         lr_actor: float = 1e-3,
+         lr_actor: float = 2.5e-4,#1e-3,
          # lr_critic: float = 0.0003,
-         lr_critic: float = 3e-4,
+         lr_critic: float = 2.5e-4,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
          save_steps: int = 25000,
          stats_steps: int = 2500,
+         label: str = "meta_neural",
+         meta_mode: str = "neural",
+         actor_mode: str = "hybrid"
          ):
     """
 
@@ -80,6 +83,7 @@ def main(algorithm: str,
             before completion.
         save_steps: Number of steps between each checkpoint save
         stats_steps: Number of steps between each statistics summary timestamp
+        label: Label for the experiment to be used to specify the ouput directory
     """
 
     # make_deterministic(seed)
@@ -99,14 +103,14 @@ def main(algorithm: str,
 
     if update_steps is None:
         if algorithm == 'ppo':
-            update_steps = 100 #max_ep_len * 4
+            update_steps = 128 #max_ep_len * 4
         else:
-            update_steps = 100
+            update_steps = 128
 
     env = NudgeBaseEnv.from_name(environment, mode=algorithm, seed=seed, **env_kwargs)
 
     now = datetime.now()
-    experiment_dir = OUT_PATH / "runs" / environment / algorithm #/ now.strftime("%y-%m-%d-%H-%M")
+    experiment_dir = OUT_PATH / "runs" / environment / algorithm / label #/ now.strftime("%y-%m-%d-%H-%M")
     checkpoint_dir = experiment_dir / "checkpoints"
     image_dir = experiment_dir / "images"
     log_dir = experiment_dir
@@ -122,7 +126,7 @@ def main(algorithm: str,
     if algorithm == "deictic":
         # neural_ppo_params = (env, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
         # logic_ppo_params = (env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
-        agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, device)
+        agent = DeicticPPO(env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
         agent.policy._print()
         # agent = DeicticPPO(env, neural_ppo_params, logic_ppo_params, rules, optimizer, lr_actor, lr_critic, device)
     elif algorithm == "ppo":
@@ -169,6 +173,7 @@ def main(algorithm: str,
     
     wandb.init(
         project="DeepDeicticRL",
+        name=label,
         config={
             "steps": total_steps,
             })
@@ -179,11 +184,11 @@ def main(algorithm: str,
         n_episodes += 1
         epsilon = epsilon_fn(i_episode)
 
-        action_history = []
+        # action_history = []
         # Play episode
         for t in range(max_ep_len):
             action = agent.select_action(state, epsilon=epsilon)
-            action_history.append(list(env.pred2action.keys())[action.detach().cpu().numpy().item()])
+            # action_history.append(list(env.pred2action.keys())[action.detach().cpu().numpy().item()])
 
             state, reward, done = env.step(action)
 
@@ -196,7 +201,9 @@ def main(algorithm: str,
             ret += reward
 
             if time_step % update_steps == 0:
-                agent.update()
+                loss = agent.update()
+                wandb.log({"loss": loss, "time_step": time_step})
+                
 
             # printing average reward
             if time_step % stats_steps == 0:
@@ -216,7 +223,7 @@ def main(algorithm: str,
                 # save on wandb
                 wandb.log({"avg_return": avg_return, "time_step": time_step})
                 
-                action_stats = get_action_stats(env, action_history)
+                # action_stats = get_action_stats(env, action_history)
                 # print(action_stats)
                 agent.policy._print()
 
@@ -261,6 +268,7 @@ def main(algorithm: str,
 
 
 if __name__ == "__main__":
+
     if len(sys.argv) > 1:
         config_path = sys.argv[1]
     else:

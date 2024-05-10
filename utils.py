@@ -2,19 +2,53 @@ import torch
 import gymnasium as gym
 from nsfr.common import get_nsfr_model, get_meta_nsfr_model
 from nsfr.utils.common import load_module
+import torch
+import torch.nn as nn
+from torch.distributions.categorical import Categorical
+import numpy as np
 
 from stable_baselines3 import PPO
 # from huggingface_sb3 import load_from_hub, push_to_hub
 
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
 
-def get_meta_actor(env, meta_rules, device, train=True, mode='logic'):
-    assert mode in ['logic', 'neural']
-    if mode == 'logic':
+class NeuralMetaActor(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(64 * 7 * 7, 512)),
+            nn.ReLU(),
+        )
+        self.actor = layer_init(nn.Linear(512, 2), std=0.01)
+        
+    def forward(self, x):
+        hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        return probs.probs
+
+
+def get_meta_actor(env, meta_rules, device, train=True, meta_mode='logic'):
+    assert meta_mode in ['logic', 'neural']
+    if meta_mode == 'logic':
         return get_meta_nsfr_model(env.name, meta_rules, device, train=train)
-    if mode == 'neural':
-        mlp_module_path = f"in/envs/{env.name}/mlp.py"
-        module = load_module(mlp_module_path)
-        return module.MLP(out_size=1, has_sigmoid=True, device=device)
+    if meta_mode == 'neural':
+        net = NeuralMetaActor()
+        net.to(device)
+        return net
+        # mlp_module_path = f"in/envs/{env.name}/mlp.py"
+        # module = load_module(mlp_module_path)
+        # return module.MLP(out_size=1, has_sigmoid=True, device=device)
     
     
 def extract_policy_probs(NSFR, V_T, device):
@@ -79,12 +113,15 @@ def load_cleanrl_envs(env_id, run_name=None, capture_video=False, num_envs=1):
     )
     return envs
     
-def load_cleanrl_agent(envs, device):
+def load_cleanrl_agent(env, pretrained, device):
     from cleanrl.cleanrl.ppo_atari import Agent
-    agent = Agent(envs) #, device=device, verbose=1)
-    try:
-        agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth"))
+    agent = Agent(env) #, device=device, verbose=1)
+    if pretrained:
+        try:
+            agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth"))
+            agent.to(device)
+        except RuntimeError:
+            agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth", map_location=torch.device('cpu')))
+    else:
         agent.to(device)
-    except RuntimeError:
-        agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth", map_location=torch.device('cpu')))
     return agent, agent

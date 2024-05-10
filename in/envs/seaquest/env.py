@@ -28,13 +28,15 @@ class NudgeEnv(NudgeBaseEnv):
         #self.raw_env = gymnasium.make("SeaquestNoFrameskip-v4")
         # self.raw_env = gymnasium.make("Seaquest-v4")
         # self.raw_env = load_cleanrl_envs("Seaquest-v4")
-        self.raw_env = load_cleanrl_envs("SeaquestDeterministic-v4")
+        # self.raw_env = load_cleanrl_envs("SeaquestDeterministic-v4")
         # self.raw_env = env = make_atari_env('SeaquestNoFrameskip-v4', n_envs=1, seed=seed)
         # self.raw_env = VecFrameStack(env, n_stack=4)
 
         #self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
-        self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
+        # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
+        self.env = OCAtari(env_name="Seaquest", mode="ram",
                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        self.env._env =  gymnasium.wrappers.RecordEpisodeStatistics(self.env._env)
         self.n_actions = 6
         self.n_raw_actions = 18
         self.n_objects = 43
@@ -51,7 +53,7 @@ class NudgeEnv(NudgeBaseEnv):
 
     def reset(self):
         _, _ = self.env.reset(seed=self.seed)
-        raw_state, _ = self.raw_env.reset(seed=self.seed)
+        # raw_state, _ = self.raw_env.reset(seed=self.seed)
         # raw_state = raw_state.unsqueeze(0)
         state = self.env.objects
         raw_state = self.env.dqn_obs

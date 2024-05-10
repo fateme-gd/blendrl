@@ -36,7 +36,35 @@ class NeuralMetaActor(nn.Module):
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
         return probs.probs
+    
+    
+class CNNActor(nn.Module):
+    def __init__(self, n_actions=18, ):
+        super().__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(64 * 7 * 7, 512)),
+            nn.ReLU(),
+        )
+        self.actor = layer_init(nn.Linear(512, n_actions), std=0.01)
+        self.critic = layer_init(nn.Linear(512, 1), std=1)
 
+    def get_value(self, x):
+        return self.critic(self.network(x / 255.0))
+
+    def get_action_and_value(self, x, action=None):
+        hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 def get_meta_actor(env, meta_rules, device, train=True, meta_mode='logic'):
     assert meta_mode in ['logic', 'neural']
@@ -113,9 +141,9 @@ def load_cleanrl_envs(env_id, run_name=None, capture_video=False, num_envs=1):
     )
     return envs
     
-def load_cleanrl_agent(env, pretrained, device):
-    from cleanrl.cleanrl.ppo_atari import Agent
-    agent = Agent(env) #, device=device, verbose=1)
+def load_cleanrl_agent(pretrained, device):
+    # from cleanrl.cleanrl.ppo_atari import Agent
+    agent = CNNActor(n_actions=18) #, device=device, verbose=1)
     if pretrained:
         try:
             agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth"))
@@ -124,4 +152,4 @@ def load_cleanrl_agent(env, pretrained, device):
             agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth", map_location=torch.device('cpu')))
     else:
         agent.to(device)
-    return agent, agent
+    return agent

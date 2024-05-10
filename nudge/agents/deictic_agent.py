@@ -217,7 +217,9 @@ class DeicticActorCritic(nn.Module):
         # self.baseline_ppo = PPO("MlpPolicy", env.raw_env, verbose=1)
         # self.baseline_ppo = load_pretrained_stable_baseline_ppo(env, device)
         # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
-        self.visual_neural_actor, self.critic = load_cleanrl_agent(env=env.raw_env, pretrained=False, device=device)
+        # self.visual_neural_actor, self.critic = load_cleanrl_agent(env=env.raw_env, pretrained=False, device=device)
+        self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
+        
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.meta_actor = get_meta_actor(env, rules, device, train=True, meta_mode=meta_mode)#train=False)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)

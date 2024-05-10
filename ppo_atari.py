@@ -244,6 +244,7 @@ def main(algorithm: str,
     #     [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     # )
     envs = NudgeBaseEnv.from_name(args.environment, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
+    # envs.env.torch.Tensor(next_obs).to(device)
 
     # assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 

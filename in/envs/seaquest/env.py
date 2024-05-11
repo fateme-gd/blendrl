@@ -36,7 +36,9 @@ class NudgeEnv(NudgeBaseEnv):
         # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
         self.env = OCAtari(env_name="Seaquest", mode="ram",
                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        # for learning script from cleanrl
         self.env._env =  gymnasium.wrappers.RecordEpisodeStatistics(self.env._env)
+        self.env._env =  gymnasium.wrappers.AutoResetWrapper(self.env._env)
         self.n_actions = 6
         self.n_raw_actions = 18
         self.n_objects = 43
@@ -58,6 +60,8 @@ class NudgeEnv(NudgeBaseEnv):
         state = self.env.objects
         raw_state = self.env.dqn_obs
         logic_state, neural_state =  self.extract_logic_state(state), self.extract_neural_state(raw_state)
+        # if len(logic_state.shape) == 2:
+        logic_state = logic_state.unsqueeze(0)
         return logic_state, neural_state
         # return  self.convert_state(state, raw_state)
 
@@ -66,7 +70,15 @@ class NudgeEnv(NudgeBaseEnv):
         #     action = self.map_action(action)
         # step RAM env
         # obs, reward, done, _, _ = self.env.step(action)
-        obs, reward, done, truncations, infos = self.env.step(action)
+        # action = array([2]) or action = torch.tensor(2)
+        try:
+            assert action.shape[0] == 1, "invalid only 1 action for env.step"
+            action = action[0]
+        except IndexError:
+            action = action
+            
+        # obs, reward, done, truncations, infos = self.env.step(action)
+        obs, reward, truncations, done, infos = self.env.step(action)
         
         # ste RGB env
         # x = self.raw_env.step(action.unsqueeze(0)) 
@@ -77,7 +89,10 @@ class NudgeEnv(NudgeBaseEnv):
         raw_state = self.env.dqn_obs
         # raw_state = raw_obs
         # raw_state = raw_state.unsqueeze(0)
-        return self.convert_state(state, raw_state), reward, done, truncations, infos
+        logic_state, neural_state = self.convert_state(state, raw_state)
+        # if len(logic_state.shape) == 2:
+        logic_state = logic_state.unsqueeze(0)
+        return (logic_state, neural_state), reward, done, truncations, infos
 
     def extract_logic_state(self, input_state):
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)

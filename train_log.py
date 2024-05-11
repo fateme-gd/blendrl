@@ -39,7 +39,7 @@ def main(algorithm: str,
          seed: int = 0,
          device: str = "cpu",
          total_steps: int = 10000000,
-         max_ep_len: int = 2000,
+         max_ep_len: int = 4000,
          update_steps: int = None,
          epochs: int = 20,
          eps_clip: float = 0.2,
@@ -190,7 +190,7 @@ def main(algorithm: str,
             action = agent.select_action(state, epsilon=epsilon)
             # action_history.append(list(env.pred2action.keys())[action.detach().cpu().numpy().item()])
 
-            state, reward, done = env.step(action)
+            state, reward, done, _, _ = env.step(action)
 
             agent.buffer.rewards.append(reward)
             agent.buffer.is_terminals.append(done)

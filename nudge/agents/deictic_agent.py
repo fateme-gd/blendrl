@@ -280,13 +280,15 @@ class DeicticActorCritic(nn.Module):
     def get_prednames(self):
         return self.actor.get_prednames()
     
-    def get_action_and_value(self, neural_state, logic_state):
+    def get_action_and_value(self, neural_state, logic_state, action=None):
         # compute action
         action_probs = self.actor(neural_state, logic_state)
         dist = Categorical(action_probs)
-        action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
-        if torch.numel(action) > 1:
-            action = action[0]
+        if action is None:
+            action = dist.sample()
+        # action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
+        # if torch.numel(action) > 1:
+        #     action = action[0]
         logprob = dist.log_prob(action)
         
         # compute value
@@ -298,6 +300,13 @@ class DeicticActorCritic(nn.Module):
     def get_value(self, neural_state, logic_state):
         value = self.visual_neural_actor.get_value(neural_state)
         return value
+    
+    def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):
+        torch.save(self.state_dict(), checkpoint_path)
+        with open(directory / "data.pkl", "wb") as f:
+            pickle.dump(step_list, f)
+            pickle.dump(reward_list, f)
+            pickle.dump(weight_list, f)
 
 
 class DeicticPPO(nn.Module):
@@ -315,12 +324,13 @@ class DeicticPPO(nn.Module):
         self.epochs = epochs
         self.buffer = RolloutBuffer()
         self.policy = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
-        self.optimizer = optimizer([
-            {'params': self.policy.logic_actor.parameters(), 'lr': lr_actor},
-            {'params': self.policy.meta_actor.parameters(), 'lr': lr_actor},
-            # {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
-        ])
+        # self.optimizer = optimizer([
+        #     # {'params': self.policy.logic_actor.parameters(), 'lr': lr_actor},
+        #     {'params': self.policy.meta_actor.parameters(), 'lr': lr_actor},
+        #     {'params': self.policy.actor.parameters(), 'lr': lr_actor},
+        #     # {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+        # ])
+        self.optimizer = optimizer(list(self.parameters()))
 
         self.policy_old = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
         self.policy_old.load_state_dict(self.policy.state_dict())

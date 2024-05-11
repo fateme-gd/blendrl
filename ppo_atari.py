@@ -33,6 +33,9 @@ from inspect import signature
 from pathlib import Path
 from typing import Callable
 
+from rtpt import RTPT
+
+
 import torch
 import random
 import numpy as np
@@ -201,7 +204,7 @@ def main(algorithm: str,
          lr_critic: float = 2.5e-4,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
-         save_steps: int = 25000,
+         save_steps: int = 50000,
          stats_steps: int = 2500,
          label: str = "meta_neural",
          meta_mode: str = "neural",
@@ -209,6 +212,7 @@ def main(algorithm: str,
          ):
         
     args = tyro.cli(Args)
+    rtpt = RTPT(name_initials='HS', experiment_name='DeepDeicticRL', max_iterations=args.total_timesteps)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -221,7 +225,8 @@ def main(algorithm: str,
             entity=args.wandb_entity,
             sync_tensorboard=True,
             config=vars(args),
-            name=run_name,
+            # name=run_name,
+            name = label,
             monitor_gym=True,
             save_code=True,
         )
@@ -268,12 +273,16 @@ def main(algorithm: str,
     agent = DeicticActorCritic(envs, rules, actor_mode, meta_mode, device)
     #####
     
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    rtpt.start()
+    # optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    optimizer = optim.Adam(agent.parameters(), lr=lr_actor, eps=1e-5)
 
 
     # ALGO Logic: Storage setup
     observation_space = (4, 84, 84)
-    logic_observation_space = (84, 51, 4)
+    # logic_observation_space = (84, 51, 4)
+    logic_observation_space = (43, 4)
+    # logic_observation_space = (84, 43, 4)
     action_space = ()
     # obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
     # actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
@@ -289,12 +298,14 @@ def main(algorithm: str,
     global_step = 0
     start_time = time.time()
     next_logic_obs, next_obs = envs.reset()#(seed=seed)
+    # 1 env 
     next_logic_obs = next_logic_obs.to(device)
     next_obs = next_obs.to(device)
     # next_obs = torch.Tensor(next_obs).to(device)
     # next_logic_obs = torch.Tensor(next_logic_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -303,12 +314,18 @@ def main(algorithm: str,
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
+            rtpt.step()
             global_step += args.num_envs
             obs[step] = next_obs
+            # print(logic_obs.shape)
+            # print(next_logic_obs.shape)
+            logic_obs[step] = next_logic_obs
             dones[step] = next_done
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
+                # next_obs: (1, 4, 84, 84)
+                # next_logic_obs: (1, 84, 51, 4)
                 action, logprob, _, value = agent.get_action_and_value(next_obs, next_logic_obs)
                 values[step] = value.flatten()
             actions[step] = action
@@ -317,6 +334,7 @@ def main(algorithm: str,
             # TRY NOT TO MODIFY: execute the game and log data.
             # next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
             _state, reward, terminations, truncations, infos  = envs.step(action.cpu().numpy())
+            # print(terminations, truncations)
             terminations = np.array([terminations])
             truncations = np.array([truncations])
             
@@ -326,11 +344,27 @@ def main(algorithm: str,
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
             if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info and "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                info = infos['final_info']
+                # print(next_logic_obs)
+                # if terminations[0] or truncations[0]:
+                # episodic_return = 
+                # for info in infos["final_info"]:
+                if "episode" in info:
+                    print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                    writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                    writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+              
+            # Save the model      
+            if global_step % save_steps == 1:
+                experiment_dir = OUT_PATH / "runs" / environment / algorithm # / now.strftime("%y-%m-%d-%H-%M")
+                checkpoint_dir = experiment_dir / "checkpoints"
+                image_dir = experiment_dir / "images"
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                os.makedirs(image_dir, exist_ok=True)
+
+                checkpoint_path = checkpoint_dir / f"step_{global_step}.pth"
+                agent.save(checkpoint_path, checkpoint_dir, [], [], [])
+                print("\nSaved model at:", checkpoint_path)
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -368,7 +402,7 @@ def main(algorithm: str,
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
 
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_actions.long()[mb_inds])
+                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_logic_obs[mb_inds], b_actions.long()[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -409,6 +443,8 @@ def main(algorithm: str,
                 loss.backward()
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                 optimizer.step()
+                
+
 
             if args.target_kl is not None and approx_kl > args.target_kl:
                 break
@@ -428,6 +464,8 @@ def main(algorithm: str,
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        
+  
         
         # save_path = "out/deictic_ppo_{}.pth".format(args.env_id)
         # torch.save(agent.state_dict(), save_path)

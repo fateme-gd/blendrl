@@ -185,7 +185,7 @@ def main(algorithm: str,
             action = agent.select_action(state, epsilon=epsilon)
             action_history.append(list(env.pred2action.keys())[action.detach().cpu().numpy().item()])
 
-            state, reward, done = env.step(action)
+            state, reward, done, _, _ = env.step(action)
 
             agent.buffer.rewards.append(reward)
             agent.buffer.is_terminals.append(done)

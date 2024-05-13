@@ -295,6 +295,7 @@ class DeicticActorCritic(nn.Module):
         value = self.visual_neural_actor.get_value(neural_state)
         
         # action, action_logprob = self.act(neural_state, logic_state, epsilon=epsilon)
+        print(action, dist.probs)
         return action, logprob, dist.entropy(), value
     
     def get_value(self, neural_state, logic_state):

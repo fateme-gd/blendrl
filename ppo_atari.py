@@ -81,7 +81,7 @@ class Args:
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
-    learning_rate: float = 2.5e-4
+    learning_rate: float = 2.5e-5
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
@@ -271,11 +271,14 @@ def main(algorithm: str,
     # meta_mode = "neural"
     # agent = DeicticPPO(envs, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
     agent = DeicticActorCritic(envs, rules, actor_mode, meta_mode, device)
+    wandb.watch(agent)
     #####
     
+    for param in agent.parameters():
+        print(param)
     rtpt.start()
-    # optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-    optimizer = optim.Adam(agent.parameters(), lr=lr_actor, eps=1e-5)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    # optimizer = optim.Adam(agent.parameters(), lr=lr_actor, eps=1e-5)
 
 
     # ALGO Logic: Storage setup
@@ -305,6 +308,11 @@ def main(algorithm: str,
     # next_logic_obs = torch.Tensor(next_logic_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
+    # next_obs_array = next_obs.detach().cpu().numpy()
+    # # (1, 4, 84, 84)
+    # for i in range(4):
+    #     image = wandb.Image(next_obs_array[0][0], caption=f"State at global_step={global_step}_{i}")
+    #     wandb.log({"state_image": image})
     
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -321,6 +329,7 @@ def main(algorithm: str,
             # print(next_logic_obs.shape)
             logic_obs[step] = next_logic_obs
             dones[step] = next_done
+            
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
@@ -331,9 +340,11 @@ def main(algorithm: str,
             actions[step] = action
             logprobs[step] = logprob
 
+            ac = action.cpu().numpy()[0]
+                
             # TRY NOT TO MODIFY: execute the game and log data.
             # next_obs, reward, terminations, truncations, infos = envs.step(action.cpu().numpy())
-            _state, reward, terminations, truncations, infos  = envs.step(action.cpu().numpy())
+            _state, reward, terminations, truncations, infos  = envs.step(action.cpu().numpy()[0])
             # print(terminations, truncations)
             terminations = np.array([terminations])
             truncations = np.array([truncations])
@@ -343,6 +354,16 @@ def main(algorithm: str,
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
+
+            # Plot image
+            # next_obs_array = next_obs.detach().cpu().numpy()
+            # max_rgb = np.max(next_obs_array)
+            # # (1, 4, 84, 84)
+            # for i in range(4):
+            #     image = wandb.Image(next_obs_array[0][i], caption=f"State at global_step={global_step}_{i}")
+            #     wandb.log({"state_image": image})
+        
+        
             if "final_info" in infos:
                 info = infos['final_info']
                 # print(next_logic_obs)
@@ -441,6 +462,9 @@ def main(algorithm: str,
 
                 optimizer.zero_grad()
                 loss.backward()
+                # for param in agent.named_parameters():
+                #     print(param[1].grad)
+                #     print(param[0])
                 nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
                 optimizer.step()
                 
@@ -464,6 +488,7 @@ def main(algorithm: str,
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        wandb.log({"step": global_step})
         
   
         

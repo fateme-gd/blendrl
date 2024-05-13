@@ -34,7 +34,8 @@ class NudgeEnv(NudgeBaseEnv):
 
         #self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
         # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
-        self.env = OCAtari(env_name="Seaquest", mode="ram",
+        # self.env = OCAtari(env_name="Seaquest", mode="ram",
+        self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
         self.env._env =  gymnasium.wrappers.RecordEpisodeStatistics(self.env._env)
@@ -71,11 +72,13 @@ class NudgeEnv(NudgeBaseEnv):
         # step RAM env
         # obs, reward, done, _, _ = self.env.step(action)
         # action = array([2]) or action = torch.tensor(2)
-        try:
-            assert action.shape[0] == 1, "invalid only 1 action for env.step"
-            action = action[0]
-        except IndexError:
-            action = action
+        # try:
+        #     assert action.shape[0] == 1, "invalid only 1 action for env.step"
+        #     action = action[0]
+        # except IndexError:
+        #     action = action
+        
+
             
         # obs, reward, done, truncations, infos = self.env.step(action)
         obs, reward, truncations, done, infos = self.env.step(action)

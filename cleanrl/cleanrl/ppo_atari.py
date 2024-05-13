@@ -141,6 +141,7 @@ class Agent(nn.Module):
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
+        # print(action, probs.probs)
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
@@ -226,6 +227,15 @@ if __name__ == "__main__":
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_done).to(device)
+            
+            
+            # # Plot image
+            # next_obs_array = next_obs.detach().cpu().numpy()
+            # max_rgb = np.max(next_obs_array)
+            # # (1, 4, 84, 84)
+            # for i in range(4):
+            #     image = wandb.Image(next_obs_array[0][i], caption=f"State at global_step={global_step}_{i}")
+            #     wandb.log({"state_image": image})
 
             if "final_info" in infos:
                 for info in infos["final_info"]:

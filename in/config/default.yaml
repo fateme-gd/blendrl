@@ -3,8 +3,8 @@ environment: seaquest
 rules: default
 update_steps: 128
 device: cuda:0
-lr_actor: 2.5e-3
-lr_critic: 2.5e-3
-label: neural_meta_neural_e3
+lr_actor: 2.5e-5
+lr_critic: 2.5e-5
+label: test_grad
 actor_mode: neural
 meta_mode: neural

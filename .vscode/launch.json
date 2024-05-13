@@ -31,6 +31,14 @@
                 "--env-id",
                 "Seaquest-v4"
             ],
-        }
+        },
+        {
+            "name": "train_cleanrl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ppo_atari.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
     ]
 }

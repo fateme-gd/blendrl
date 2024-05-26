@@ -1,6 +1,3 @@
 neural_agent(X):-close_by_enemy(P,E).
 neural_agent(X):-close_by_missile(P,M).
-neural_agent(X):-visible_enemy(E).
-neural_agent(X):-visible_missile(M).
-logic_agent(X):-visible_diver(D).
-logic_agent(X):-oxygen_low(B).
+logic_agent(X):-.

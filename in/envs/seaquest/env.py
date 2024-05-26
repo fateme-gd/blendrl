@@ -1,15 +1,47 @@
 from typing import Sequence
-
+import torch
 from nudge.env import NudgeBaseEnv
 from ocatari.core import OCAtari
 import numpy as np
 import torch as th
 from ocatari.ram.seaquest import MAX_ESSENTIAL_OBJECTS
 import gymnasium
+import gymnasium as gym
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
+
+
+from stable_baselines3.common.atari_wrappers import (  # isort:skip
+    ClipRewardEnv,
+    EpisodicLifeEnv,
+    FireResetEnv,
+    MaxAndSkipEnv,
+    NoopResetEnv,
+)
+
+def make_env(env):
+    # def thunk():
+        # if capture_video and idx == 0:
+            # env = gym.make(env_id, render_mode="rgb_array")
+            # env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+        # else:
+            # env = gym.make(env_id)
+    env = gym.wrappers.RecordEpisodeStatistics(env)
+    env = NoopResetEnv(env, noop_max=30)
+    env = MaxAndSkipEnv(env, skip=4)
+    env = EpisodicLifeEnv(env)
+    if "FIRE" in env.unwrapped.get_action_meanings():
+        env = FireResetEnv(env)
+    env = ClipRewardEnv(env)
+    env = gym.wrappers.ResizeObservation(env, (84, 84))
+    env = gym.wrappers.GrayScaleObservation(env)
+    env = gym.wrappers.FrameStack(env, 4)
+    env = gym.wrappers.AutoResetWrapper(env)
+    return env
+
+
 
 class NudgeEnv(NudgeBaseEnv):
     name = "seaquest"
@@ -32,14 +64,15 @@ class NudgeEnv(NudgeBaseEnv):
         # self.raw_env = env = make_atari_env('SeaquestNoFrameskip-v4', n_envs=1, seed=seed)
         # self.raw_env = VecFrameStack(env, n_stack=4)
 
-        #self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
+        # self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
         # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
         # self.env = OCAtari(env_name="Seaquest", mode="ram",
-        self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
+        # self.env = OCAtari(env_name="Seaquest-v4", mode="ram",
+        #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        self.env = OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
-        self.env._env =  gymnasium.wrappers.RecordEpisodeStatistics(self.env._env)
-        self.env._env =  gymnasium.wrappers.AutoResetWrapper(self.env._env)
+        self.env._env = make_env(self.env._env)
         self.n_actions = 6
         self.n_raw_actions = 18
         self.n_objects = 43
@@ -55,11 +88,11 @@ class NudgeEnv(NudgeBaseEnv):
         self.relevant_objects = set(MAX_ESSENTIAL_OBJECTS.keys())
 
     def reset(self):
-        _, _ = self.env.reset(seed=self.seed)
+        obs, _ = self.env.reset(seed=self.seed)
         # raw_state, _ = self.raw_env.reset(seed=self.seed)
         # raw_state = raw_state.unsqueeze(0)
         state = self.env.objects
-        raw_state = self.env.dqn_obs
+        raw_state = obs #self.env.dqn_obs
         logic_state, neural_state =  self.extract_logic_state(state), self.extract_neural_state(raw_state)
         # if len(logic_state.shape) == 2:
         logic_state = logic_state.unsqueeze(0)
@@ -89,7 +122,7 @@ class NudgeEnv(NudgeBaseEnv):
         # assert reward == raw_reward and done == raw_done, "Two envs conflict: rewards: {} and {}, dones: {} and {}".format(reward, raw_reward, done, raw_done)  
         # assert done == raw_done, "Two envs conflict: dones: {} and {}".format(done, raw_done)  
         state = self.env.objects
-        raw_state = self.env.dqn_obs
+        raw_state = obs #self.env.dqn_obs
         # raw_state = raw_obs
         # raw_state = raw_state.unsqueeze(0)
         logic_state, neural_state = self.convert_state(state, raw_state)
@@ -117,7 +150,7 @@ class NudgeEnv(NudgeBaseEnv):
 
     def extract_neural_state(self, raw_input_state):
         # print(raw_input_state.shape)
-        return raw_input_state
+        return torch.Tensor(raw_input_state).unsqueeze(0)#.float()
 
     def close(self):
         self.env.close()

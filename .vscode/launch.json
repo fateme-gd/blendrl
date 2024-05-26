@@ -33,10 +33,18 @@
             ],
         },
         {
-            "name": "train_cleanrl",
+            "name": "ppo_atari on deirl",
             "type": "debugpy",
             "request": "launch",
             "program": "ppo_atari.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "vectorized ppo_atari on deirl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ppo_atari_vectorized.py",
             "pythonPath": "python",
             "console": "integratedTerminal"
         },

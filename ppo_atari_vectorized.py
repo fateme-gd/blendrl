@@ -23,7 +23,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 
 # added
 from nudge.agents.deictic_agent import DeicticPPO, DeicticActorCritic
-from nudge.env import NudgeBaseEnv
+from nudge.env_vectorized import VectorizedNudgeBaseEnv
 import csv
 import os
 import sys
@@ -57,7 +57,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(10)
+torch.set_num_threads(5)
 
 @dataclass
 class Args:
@@ -69,7 +69,7 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = False
+    track: bool = True
     """if toggled, this experiment will be tracked with Weights and Biases"""
     wandb_project_name: str = "cleanRL"
     """the wandb's project name"""
@@ -85,9 +85,9 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-5
     """the learning rate of the optimizer"""
-    num_envs: int = 1
+    num_envs: int = 16
     """the number of parallel game environments"""
-    num_steps: int = 1024
+    num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -192,7 +192,7 @@ def main(algorithm: str,
     # envs = gym.vector.SyncVectorEnv(
     #     [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
     # )
-    envs = NudgeBaseEnv.from_name(args.environment, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
+    envs = VectorizedNudgeBaseEnv.from_name(args.environment, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
     # envs.env.torch.Tensor(next_obs).to(device)
 
     # assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
@@ -252,7 +252,7 @@ def main(algorithm: str,
     # # (1, 4, 84, 84)
     # for i in range(4):
     #     image = wandb.Image(next_obs_array[0][0], caption=f"State at global_step={global_step}_{i}")
-    #     wandb.log({"state_image": image})
+        # wandb.log({"state_image": image})
     
     for iteration in range(1, args.num_iterations + 1):
         # Annealing the rate if instructed to do so.
@@ -281,9 +281,9 @@ def main(algorithm: str,
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            (next_logic_obs, next_obs), reward, terminations, truncations, infos  = envs.step(action.cpu().numpy()[0])
-            terminations = np.array([terminations])
-            truncations = np.array([truncations])
+            (next_logic_obs, next_obs), reward, terminations, truncations, infos  = envs.step(action.cpu().numpy())
+            terminations = np.array(terminations)
+            truncations = np.array(truncations)
             next_done = np.logical_or(terminations, truncations)
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
@@ -297,13 +297,14 @@ def main(algorithm: str,
             #     image = wandb.Image(next_obs_array[0][i], caption=f"State at global_step={global_step}_{i}")
             #     wandb.log({"state_image": image})
         
-        
-            if "final_info" in infos:
-                info = infos['final_info']
-                if "episode" in info:
-                    print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                    writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                    writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+            for info_ in infos:
+                if "final_info" in info_: # or next_done.any():
+                    info = info_['final_info']
+                    # final_info = info['final_info']
+                    if "episode" in info:
+                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
+                        writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                        writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
               
             # Save the model      
             if global_step % save_steps == 1:
@@ -430,9 +431,7 @@ if __name__ == "__main__":
     # if len(sys.argv) > 1:
     #     config_path = IN_PATH / "config" /  sys.argv[1]
     # else:
-    # config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
-    # config_path = IN_PATH / "config" / "hybrid_meta_neural.yaml"
-    config_path = IN_PATH / "config" / "neural.yaml"
+    config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
 
     with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.Loader)

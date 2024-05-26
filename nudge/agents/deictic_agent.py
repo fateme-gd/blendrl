@@ -20,7 +20,6 @@ from nsfr.common import get_nsfr_model
 
 from utils import get_meta_actor, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
 
-from stable_baselines3 import PPO
 
 class DeicticActor(nn.Module):
     def __init__(self, env, neural_actor, logic_actor, meta_actor, actor_mode, meta_mode, device=None):
@@ -176,7 +175,7 @@ class DeicticActor(nn.Module):
         
         # action_dist = self.reshape_action_distribution(action_dist)
         # action_dist = self.neural_actor.get_distribution(neural_state).distribution.probs
-        hidden = self.neural_actor.network(neural_state / 255.0)
+        hidden = self.neural_actor.network(neural_state)
         logits = self.neural_actor.actor(hidden)
         probs = Categorical(logits=logits)
         action_dist = probs.probs
@@ -281,7 +280,10 @@ class DeicticActorCritic(nn.Module):
         return self.actor.get_prednames()
     
     def get_action_and_value(self, neural_state, logic_state, action=None):
+        # test if it works -> nope
+        # return self.visual_neural_actor.get_action_and_value(neural_state)
         # compute action
+        # n_envs * n_actions
         action_probs = self.actor(neural_state, logic_state)
         dist = Categorical(action_probs)
         if action is None:
@@ -295,7 +297,7 @@ class DeicticActorCritic(nn.Module):
         value = self.visual_neural_actor.get_value(neural_state)
         
         # action, action_logprob = self.act(neural_state, logic_state, epsilon=epsilon)
-        print(action, dist.probs)
+        # print(action, dist.probs)
         return action, logprob, dist.entropy(), value
     
     def get_value(self, neural_state, logic_state):

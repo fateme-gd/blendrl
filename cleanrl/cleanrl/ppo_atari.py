@@ -94,16 +94,15 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = gym.make(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = NoopResetEnv(env, noop_max=30)
-        # env = MaxAndSkipEnv(env, skip=4)
-        # env = EpisodicLifeEnv(env)
-        # if "FIRE" in env.unwrapped.get_action_meanings():
-        #     env = FireResetEnv(env)
-        # env = ClipRewardEnv(env)
+        env = NoopResetEnv(env, noop_max=30)
+        env = MaxAndSkipEnv(env, skip=4)
+        env = EpisodicLifeEnv(env)
+        if "FIRE" in env.unwrapped.get_action_meanings():
+            env = FireResetEnv(env)
+        env = ClipRewardEnv(env)
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
-        # env = gym.wrappers.FrameStack(env, 1)
         return env
 
     return thunk
@@ -217,6 +216,7 @@ if __name__ == "__main__":
 
             # ALGO LOGIC: action logic
             with torch.no_grad():
+                # print(next_obs.shape)
                 action, logprob, _, value = agent.get_action_and_value(next_obs)
                 values[step] = value.flatten()
             actions[step] = action
@@ -338,9 +338,9 @@ if __name__ == "__main__":
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
         
-        save_path = "out/ppo_{}.pth".format(args.env_id)
-        torch.save(agent.state_dict(), save_path)
-        print("Agent has been saved to {}".format(save_path))
+        # save_path = "out/ppo_{}.pth".format(args.env_id)
+        # torch.save(agent.state_dict(), save_path)
+        # print("Agent has been saved to {}".format(save_path))
 
 
     envs.close()

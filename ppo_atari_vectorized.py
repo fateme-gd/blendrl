@@ -148,7 +148,7 @@ def main(algorithm: str,
          lr_critic: float = 2.5e-4,
          epsilon_fn: Callable = exp_decay,
          recover: bool = False,
-         save_steps: int = 500000,
+         save_steps: int = 5000,
          stats_steps: int = 2500,
          label: str = "meta_neural",
          meta_mode: str = "neural",
@@ -307,8 +307,8 @@ def main(algorithm: str,
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
               
             # Save the model      
-            if global_step % save_steps == 1:
-                experiment_dir = OUT_PATH / "runs" / environment / algorithm # / now.strftime("%y-%m-%d-%H-%M")
+            if int(global_step / args.num_envs) % save_steps == 0:
+                experiment_dir = OUT_PATH / "runs" / environment / label # / now.strftime("%y-%m-%d-%H-%M")
                 checkpoint_dir = experiment_dir / "checkpoints"
                 image_dir = experiment_dir / "images"
                 os.makedirs(checkpoint_dir, exist_ok=True)
@@ -431,7 +431,8 @@ if __name__ == "__main__":
     # if len(sys.argv) > 1:
     #     config_path = IN_PATH / "config" /  sys.argv[1]
     # else:
-    config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
+    # config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
+    config_path = IN_PATH / "config" / "hybrid_meta_neural.yaml"
 
     with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.Loader)

@@ -3,8 +3,8 @@ environment: seaquest
 rules: default
 update_steps: 128
 device: cuda:0
-lr_actor: 2.5e-4
-lr_critic: 2.5e-4
-label: hybrid_meta_logic_e4_step128
+lr_actor: 2.5e-3
+lr_critic: 2.5e-3
+label: hybrid_meta_logic_e3_step128
 actor_mode: hybrid
 meta_mode: logic

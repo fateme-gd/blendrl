@@ -64,10 +64,37 @@ AVAILABLE_GAMES = ["Adventure", "Alien", "Amidar", "Assault", "Asterix", "Astero
                    "Qbert", "Riverraid", "RoadRunner", "Seaquest", "Skiing", "SpaceInvaders", "Tennis", "TimePilot", "UpNDown", "Videocube", "VideoPinball", "Venture",
                    "Yarsrevenge", "Zaxxon"]
 
+from stable_baselines3.common.atari_wrappers import (  # isort:skip
+    ClipRewardEnv,
+    EpisodicLifeEnv,
+    FireResetEnv,
+    MaxAndSkipEnv,
+    NoopResetEnv,
+)
 
+def make_env(env_id, idx, capture_video, run_name):
+    def thunk():
+        if capture_video and idx == 0:
+            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+        else:
+            env = gym.make(env_id)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = NoopResetEnv(env, noop_max=30)
+        env = MaxAndSkipEnv(env, skip=4)
+        env = EpisodicLifeEnv(env)
+        if "FIRE" in env.unwrapped.get_action_meanings():
+            env = FireResetEnv(env)
+        env = ClipRewardEnv(env)
+        env = gym.wrappers.ResizeObservation(env, (84, 84))
+        env = gym.wrappers.GrayScaleObservation(env)
+        env = gym.wrappers.FrameStack(env, 4)
+        return env
+
+    return thunk
     
 # TODO: complete the docstring 
-class OCAtari:
+class VectorizedOCAtari:
     """
     The OCAtari environment. Initialize it to get a Atari environments with objects tracked.
 
@@ -83,7 +110,7 @@ class OCAtari:
     the remaining \*args and \**kwargs will be passed to the \
         `gymnasium.make <https://gymnasium.farama.org/api/registry/#gymnasium.make>`_ function.
     """
-    def __init__(self, env_name, mode="ram", hud=False, obs_mode="dqn",
+    def __init__(self, env_name, n_envs, mode="ram", hud=False, obs_mode="dqn",
                  render_mode=None, render_oc_overlay=False, *args, **kwargs):
         if "ALE/" in env_name: #case if v5 specified
             to_check = env_name[4:8]
@@ -97,8 +124,13 @@ class OCAtari:
             self._covered_game = False
         else:
             self._covered_game = True
+        self.n_envs = n_envs
         gym_render_mode = "rgb_array" if render_oc_overlay else render_mode
-        self._env = gym.make(env_name, render_mode=gym_render_mode, max_episode_steps=10000, *args, **kwargs)
+        # self._env = gym.make(env_name, render_mode=gym_render_mode, max_episode_steps=10000, *args, **kwargs)
+        # vectorized env, each actual env can be accessed by `self._envs.envs[i]`
+        self._envs = gym.vector.SyncVectorEnv(
+            [make_env(env_name, i, False, None) for i in range(self.num_envs)],
+        )
         # print(self._env._max_episode_steps)
             # env setup
         # self._env = gym.vector.SyncVectorEnv([make_env(env_name, i, False, None) for i in range(1)],)
@@ -142,7 +174,7 @@ class OCAtari:
             if torch_imported:
                 self._fill_buffer = self._fill_buffer_dqn
                 self._reset_buffer = self._reset_buffer_dqn
-                self._env.observation_space = gym.spaces.Box(0,255.0,(4,84,84))
+                self._envs.observation_space = gym.spaces.Box(0,255.0,(4,84,84))
             else:
                 print("To use the buffer of OCAtari, you need to install torch.")
         elif obs_mode == "ori":
@@ -151,7 +183,7 @@ class OCAtari:
         elif obs_mode == "obj":
             print("Using OBJ State Representation")
             if mode == "ram":
-                self._env.observation_space = gym.spaces.Box(0,255.0,(4,3,4))
+                self._envs.observation_space = gym.spaces.Box(0,255.0,(4,3,4))
                 self._fill_buffer = self._fill_buffer_obj
                 self._reset_buffer = self._reset_buffer_obj
             else:
@@ -167,13 +199,13 @@ class OCAtari:
 
         self.buffer_window_size = 4
         self._state_buffer = deque([], maxlen=self.buffer_window_size)
-        self.action_space = self._env.action_space
-        self._ale = self._env.ale
+        self.action_space = self._envs.action_space
+        self._ale = self._envs.ale
         # inhererit every attribute and method of env
-        for meth in dir(self._env):
+        for meth in dir(self._envs):
             if meth not in dir(self):
                 try:
-                    setattr(self, meth, getattr(self._env, meth))
+                    setattr(self, meth, getattr(self._envs, meth))
                 except AttributeError:
                     pass
 
@@ -190,11 +222,13 @@ class OCAtari:
         raise NotImplementedError()
 
     def _step_ram(self, *args, **kwargs):
-        obs, reward, terminated, truncated, info = self._env.step(*args, **kwargs)
+        obs, reward, terminated, truncated, info = self._envs.step(*args, **kwargs)
         if self.mode == "ram" or self.mode == "revised":
-            self.detect_objects(self._objects, self._env.env.ale.getRAM(), self.game_name, self.hud)
+            for env in self._envs.envs:
+                self.detect_objects(self._objects, env.ale.getRAM(), self.game_name, self.hud)
+            # self.detect_objects(self._objects, self._envs.env.ale.getRAM(), self.game_name, self.hud)
         else:  # mode == "raw" because in raw mode we augment the info dictionary
-            self.detect_objects(info, self._env.env.ale.getRAM(), self.game_name, self.hud)
+            self.detect_objects(info, self._envs.env.ale.getRAM(), self.game_name, self.hud)
         self._fill_buffer()
         if self.obs_mode == "dqn":
             obs = self.dqn_obs[0]
@@ -207,14 +241,14 @@ class OCAtari:
         return obs, reward, truncated, terminated, info
 
     def _step_vision(self, *args, **kwargs):
-        obs, reward, terminated, truncated, info = self._env.step(*args, **kwargs)
+        obs, reward, terminated, truncated, info = self._envs.step(*args, **kwargs)
         self.detect_objects(self._objects, obs, self.game_name, self.hud)
         self._fill_buffer()
         return obs, reward, truncated, terminated, info
 
     def _step_test(self, *args, **kwargs):
-        obs, reward, terminated, truncated, info = self._env.step(*args, **kwargs)
-        self.detect_objects_r(self._objects, self._env.env.ale.getRAM(), self.game_name, self.hud)
+        obs, reward, terminated, truncated, info = self._envs.step(*args, **kwargs)
+        self.detect_objects_r(self._objects, self._envs.env.ale.getRAM(), self.game_name, self.hud)
         self.detect_objects_v(self.objects_v, obs, self.game_name, self.hud)
         self._fill_buffer()
         # if self.obs_mode in ["dqn", "ori"]:
@@ -526,149 +560,3 @@ class OCAtari:
         rendered = rendered.cpu().detach().to(int).numpy()
         return rendered
 
-
-class HideEnemyPong(OCAtari):
-    def __init__(self, env_name, mode="raw", hud=False, obs_mode="dqn", *args, **kwargs):
-        self.render_mode = kwargs["render_mode"] if "render_mode" in kwargs else None
-        if self.render_mode == "human":
-            kwargs["render_mode"] = None
-            self.screen = pygame.display.set_mode((160, 210), flags=pygame.SCALED)
-            pygame.init()
-        super().__init__(env_name, mode, hud, obs_mode, *args, **kwargs)
-
-    def _step_ram(self, *args, **kwargs):
-        self._make_rendering()
-        return super()._step_ram(*args, **kwargs)
-    
-    def _make_rendering(self):
-        rgb_array = self._ale.getScreenRGB()
-        rgb_array[34:194, 4:20] = [144, 72, 17]
-
-        # Render RGB image
-        rgb_array = np.transpose(rgb_array, (1, 0, 2))
-        pygame.pixelcopy.array_to_surface(self.screen, rgb_array)
-
-
-        # # Render object coordinates and velocity vectors
-        # for obj in self.objects:
-        #     x = obj.x + obj.w / 2
-        #     y = obj.y + obj.h / 2
-        #     dx = obj.dx
-        #     dy = obj.dy
-
-        #     # Draw an 'X' at object center
-        #     pygame.draw.line(self.screen, color=(255, 255, 255),
-        #                     start_pos=(x - 2, y - 2), end_pos=(x + 2, y + 2))
-        #     pygame.draw.line(self.screen, color=(255, 255, 255),
-        #                     start_pos=(x - 2, y + 2), end_pos=(x + 2, y - 2))
-
-        #     # Draw velocity vector
-        #     if dx != 0 or dy != 0:
-        #         pygame.draw.line(self.screen, color=(100, 200, 255),
-        #                         start_pos=(float(x), float(y)), end_pos=(x + 8 * dx, y + 8 * dy))
-
-        pygame.display.flip()
-        pygame.event.pump()
-    
-    def _fill_buffer_dqn(self):
-        image = self._ale.getScreenGrayscale()
-        image[34:194, 8:24] = 87
-        state = cv2.resize(
-            image, (84, 84), interpolation=cv2.INTER_AREA,
-        )
-        self._state_buffer.append(_tensor(state, dtype=_uint8,
-                                          **_tensor_kwargs))
-
-
-class EasyDonkey(OCAtari):
-    def __init__(self, env_name="ALE/DonkeyKong", mode="ram", hud=False, obs_mode="dqn", render_mode=None, render_oc_overlay=False, *args, **kwargs):
-        self.lasty = 154
-        self.nb_lives = 2
-        super().__init__(env_name, mode, hud, obs_mode, render_mode, render_oc_overlay, *args, **kwargs)
-        
-    def reset(self, *args, **kwargs):
-        ret = super().reset(*args, **kwargs)
-        self._randomize_pos()
-        return ret
-        
-    def _step_ram(self, *args, **kwargs):
-        obs, reward, truncated, terminated, info = super()._step_ram(*args, **kwargs)
-        ram = self.get_ram()
-        for obj in self.objects:
-            if "Player" in str(obj):
-                rew = self.lasty - obj.y
-                self.miny = obj.y
-                reward += 10 * rew
-                self.lasty = obj.y
-        if self.nb_lives != ram[35]:
-            self._randomize_pos()
-            self.nb_lives = ram[35]
-            reward = 0
-        self.nb_lives = ram[35]
-        
-        return obs, reward, truncated, terminated, info
-    
-    def _randomize_pos(self):
-        pot_start_pos = [(49, 154), (110, 154), (49, 127), (111, 132), (111, 99),
-                         (50, 71), (53, 48), (111, 43), (111, 21)] #+ [(49, 154) for _ in range(10)] #(78, 21)] 
-                        
-        rndinit = np.random.randint(0, len(pot_start_pos))
-        self._env.step(1) # activate the game
-        [self._env.step(0) for _ in range(8)] 
-        startp = pot_start_pos[rndinit]
-        for rp, sp in zip([19, 27], startp):
-            self.set_ram(rp, sp)
-        self.lasty = startp[1]
-
-
-def extra_rew(game_objects, episode_starts, last_crashed):
-    player = [o for o in game_objects if "Player" in str(o)][0]
-    # Get current platform
-    platform = np.ceil((player.xy[1] - player.h - 16) / 48)  # 0: topmost, 3: lowest platform
-
-    # Encourage moving to the child
-    if not episode_starts and not last_crashed:
-        if platform % 2 == 0:  # even platform, encourage left movement
-            reward = - player.dx
-        else:  # encourage right movement
-            reward = player.dx
-
-        # Encourage upward movement
-        reward -= player.dy / 5
-    else:
-        reward = 0
-    return reward
-
-
-class EasyKangaroo(OCAtari):
-    def __init__(self, env_name="ALE/Kangaroo", mode="ram", hud=False, obs_mode="dqn", render_mode=None, render_oc_overlay=False, *args, **kwargs):
-        self.lasty = 154
-        self.nb_lives = 2
-        super().__init__(env_name, mode, hud, obs_mode, render_mode, render_oc_overlay, *args, **kwargs)
-
-    def _step_ram(self, *args, **kwargs):
-        obs, reward, truncated, terminated, info = super()._step_ram(*args, **kwargs)
-        last_crashed = self.nb_lives != info["lives"]
-        self.nb_lives = info["lives"]
-        reward += extra_rew(self.objects, last_crashed, last_crashed)
-        
-        return obs, reward, truncated, terminated, info
-
-
-if __name__ == "__main__":
-    env = EasyKangaroo(render_mode="human")
-    env.reset()
-    for st in range(1000):
-        # _, rew, truncated, terminated, _ = env.step(env.action_space.sample())
-        if st < 120:
-            action = 3
-        elif st < 150:
-            action = 2
-        else:
-            action = 4
-        _, rew, truncated, terminated, _ = env.step(action)
-        if rew:
-            print(rew)
-        if truncated or terminated:
-            env.reset()
-        env.render()

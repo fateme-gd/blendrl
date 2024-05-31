@@ -103,7 +103,7 @@ def load_model(model_dir,
     elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
     else:
-        model = DeicticActorCritic(env, device=device, rules=rules).to(device)
+        model = DeicticActorCritic(env, rules=rules, actor_mode=config["actor_mode"], meta_mode=config["meta_mode"], device=device).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:

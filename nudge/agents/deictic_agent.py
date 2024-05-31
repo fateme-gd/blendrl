@@ -219,8 +219,8 @@ class DeicticActorCritic(nn.Module):
         # self.visual_neural_actor, self.critic = load_cleanrl_agent(env=env.raw_env, pretrained=False, device=device)
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
         
-        self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.meta_actor = get_meta_actor(env, rules, device, train=True, meta_mode=meta_mode)#train=False)
+        self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=False)
+        self.meta_actor = get_meta_actor(env, rules, device, meta_mode=meta_mode, train=True)
         # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
         self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, actor_mode, meta_mode, device=device)
         # self.critic = module.MLP(device=device, out_size=1, logic=True)

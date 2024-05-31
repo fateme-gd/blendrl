@@ -57,7 +57,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(5)
+torch.set_num_threads(6)
 
 @dataclass
 class Args:
@@ -211,11 +211,13 @@ def main(algorithm: str,
     # meta_mode = "neural"
     # agent = DeicticPPO(envs, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
     agent = DeicticActorCritic(envs, rules, actor_mode, meta_mode, device)
-    # wandb.watch(agent)
+    agent._print()
+    if args.track:
+        wandb.watch(agent)
     #####
     
-    for param in agent.parameters():
-        print(param)
+    # for param in agent.parameters():
+    #     print(param)
     rtpt.start()
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
     # optimizer = optim.Adam(agent.parameters(), lr=lr_actor, eps=1e-5)
@@ -319,10 +321,10 @@ def main(algorithm: str,
                 print("\nSaved model at:", checkpoint_path)
                 
                 # save hyper params
-                save_hyperparams(signature=signature(main),
-                     local_scope=locals(),
-                     save_path=experiment_dir / "config.yaml",
-                     print_summary=True)
+                # save_hyperparams(signature=signature(main),
+                #      local_scope=locals(),
+                #      save_path=experiment_dir / "config.yaml",
+                #      print_summary=True)
 
         # bootstrap value if not done
         with torch.no_grad():
@@ -418,6 +420,7 @@ def main(algorithm: str,
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        agent._print()
         # wandb.log({"step": global_step})
         
   
@@ -437,8 +440,8 @@ if __name__ == "__main__":
     # if len(sys.argv) > 1:
     #     config_path = IN_PATH / "config" /  sys.argv[1]
     # else:
-    # config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
-    config_path = IN_PATH / "config" / "hybrid_meta_neural.yaml"
+    config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
+    # config_path = IN_PATH / "config" / "hybrid_meta_neural.yaml"
 
     with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.Loader)

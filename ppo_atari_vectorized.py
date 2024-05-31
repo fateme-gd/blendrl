@@ -317,6 +317,12 @@ def main(algorithm: str,
                 checkpoint_path = checkpoint_dir / f"step_{global_step}.pth"
                 agent.save(checkpoint_path, checkpoint_dir, [], [], [])
                 print("\nSaved model at:", checkpoint_path)
+                
+                # save hyper params
+                save_hyperparams(signature=signature(main),
+                     local_scope=locals(),
+                     save_path=experiment_dir / "config.yaml",
+                     print_summary=True)
 
         # bootstrap value if not done
         with torch.no_grad():

@@ -22,7 +22,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 )
 
 # added
-from nudge.agents.deictic_agent import DeicticPPO, DeicticActorCritic
+from nudge.agents.deictic_agent import DeicticActorCritic
 from nudge.env_vectorized import VectorizedNudgeBaseEnv
 import csv
 import os
@@ -45,9 +45,9 @@ from torch.optim import Optimizer, Adam
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from nudge.agents.logic_agent import LogicPPO
-from nudge.agents.neural_agent import NeuralPPO
-from nudge.agents.deictic_agent import DeicticPPO
+# from nudge.agents.logic_agent import LogicPPO
+# from nudge.agents.neural_agent import NeuralPPO
+# from nudge.agents.deictic_agent import DeicticPPO
 from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
 from nudge.utils import exp_decay, get_action_stats
@@ -69,9 +69,9 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    track: bool = True
+    track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    wandb_project_name: str = "cleanRL"
+    wandb_project_name: str = "blendeRL"
     """the wandb's project name"""
     wandb_entity: str = None
     """the entity (team) of wandb's project"""
@@ -83,11 +83,11 @@ class Args:
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
-    learning_rate: float = 2.5e-5
+    learning_rate: float = 2.5e-3
     """the learning rate of the optimizer"""
-    num_envs: int = 16
+    num_envs: int = 10
     """the number of parallel game environments"""
-    num_steps: int = 128
+    num_steps: int = 512 #128
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -123,54 +123,41 @@ class Args:
     """the number of iterations (computed in runtime)"""
     
     # added
-    environment: str = "seaquest"
+    env_name: str = "seaquest"
+    """the name of the environment"""
     algorithm: str = "deictic"
-    
+    """the algorithm used in the agent"""
+    meta_mode: str = "logic"
+    """the mode for the blender"""
+    actor_mode: str = "hybrid"
+    """the mode for the agent"""
+    rules: str = "default"
+    """the ruleset used in the agent"""
+    save_steps: int = 1000000
+    """the number of steps to save models"""
+    pretrained: bool = False
+    """to use pretrained neural agent"""
+    joint_training: bool = False
+    """jointly train neural actor and logic actor and blender"""
 
 
-
-def main(algorithm: str,
-         environment: str,
-         env_kwargs: dict = None,
-         rules: str = "default",
-         seed: int = 0,
-         device: str = "cpu",
-         total_steps: int = 10000000,
-         max_ep_len: int = 2000,
-         update_steps: int = None,
-         epochs: int = 20,
-         eps_clip: float = 0.2,
-         gamma: float = 0.99,
-         optimizer: Optimizer = Adam,
-         # lr_actor: float = 0.001,
-         lr_actor: float = 2.5e-4,#1e-3,
-         # lr_critic: float = 0.0003,
-         lr_critic: float = 2.5e-4,
-         epsilon_fn: Callable = exp_decay,
-         recover: bool = False,
-         save_steps: int = 5000,
-         stats_steps: int = 2500,
-         label: str = "meta_neural",
-         meta_mode: str = "neural",
-         actor_mode: str = "hybrid"
-         ):
+def main():
         
     args = tyro.cli(Args)
-    rtpt = RTPT(name_initials='HS', experiment_name='DeepDeicticRL', max_iterations=args.total_timesteps)
+    rtpt = RTPT(name_initials='HS', experiment_name='BlendeRL', max_iterations=args.total_timesteps)
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    model_description = "actor_{}_blender_{}".format(args.actor_mode, args.meta_mode)
+    learning_description = f"lr_{args.learning_rate}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
+    run_name = f"{args.env_id}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
-        import wandb
-
         wandb.init(
             project=args.wandb_project_name,
             entity=args.wandb_entity,
             sync_tensorboard=True,
             config=vars(args),
-            # name=run_name,
-            name = label,
+            name = run_name,
             monitor_gym=True,
             save_code=True,
         )
@@ -188,39 +175,64 @@ def main(algorithm: str,
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    # env setup
-    # envs = gym.vector.SyncVectorEnv(
-    #     [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
-    # )
-    envs = VectorizedNudgeBaseEnv.from_name(args.environment, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
-    # envs.env.torch.Tensor(next_obs).to(device)
+    envs = VectorizedNudgeBaseEnv.from_name(args.env_name, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
 
-    # assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
-
-    # agent = Agent(envs).to(device)
-    #### instantiate deictic agent
-    # lr_actor = 1e-3
-    # lr_critic = 1e-4
-    # gamma = 0.99
-    # epochs = 20
-    # eps_clip = 0.2
-    # optimizer = None
-    # learning_rate: float = 2.5e-4
-    # rules= "default"
-    # actor_mode = "neural"
-    # meta_mode = "neural"
-    # agent = DeicticPPO(envs, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device)
-    agent = DeicticActorCritic(envs, rules, actor_mode, meta_mode, device)
+    agent = DeicticActorCritic(envs, args.rules, args.actor_mode, args.meta_mode, device)
+    if args.pretrained:
+        agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))
+        agent.to(device)
+        print("Pretrained neural agent loaded!!!")
     agent._print()
     if args.track:
         wandb.watch(agent)
-    #####
-    
-    # for param in agent.parameters():
-    #     print(param)
+        
     rtpt.start()
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
-    # optimizer = optim.Adam(agent.parameters(), lr=lr_actor, eps=1e-5)
+    parameters = list(agent.logic_actor.parameters()) + list(agent.meta_actor.parameters())
+    # parameters = list(agent.visual_neural_actor.parameters()) + list(agent.logic_actor.parameters()) + list(agent.meta_actor.parameters())
+    # optimizer = optim.Adam(parameters, lr=args.learning_rate, eps=1e-5)
+    if not args.joint_training:
+        if args.algorithm == "deictic":
+            optimizer = optim.Adam(
+                [
+                    # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
+                    {"params": agent.logic_actor.parameters()},
+                    {"params": agent.meta_actor.parameters()},
+                ],
+                lr=args.learning_rate,
+                eps = 1e-5
+            )
+        elif args.algorithm == "neural":
+            optimizer = optim.Adam(
+                [
+                    # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
+                    {"params": agent.logic_actor.parameters()},
+                    {"params": agent.meta_actor.parameters(), "lr": 2.5e-4},
+                ],
+                lr=args.learning_rate,
+                eps = 1e-5
+            )
+    else:
+        if args.algorithm == "deictic":
+            optimizer = optim.Adam(
+                [
+                    {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
+                    {"params": agent.logic_actor.parameters()},
+                    {"params": agent.meta_actor.parameters()},
+                ],
+                lr=args.learning_rate,
+                eps = 1e-5
+            )
+        elif args.algorithm == "neural":
+            optimizer = optim.Adam(
+                [
+                    {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
+                    {"params": agent.logic_actor.parameters()},
+                    {"params": agent.meta_actor.parameters(), "lr": 2.5e-4},
+                ],
+                lr=args.learning_rate,
+                eps = 1e-5
+            )
+        
 
 
     # ALGO Logic: Storage setup
@@ -229,8 +241,6 @@ def main(algorithm: str,
     logic_observation_space = (43, 4)
     # logic_observation_space = (84, 43, 4)
     action_space = ()
-    # obs = torch.zeros((args.num_steps, args.num_envs) + envs.single_observation_space.shape).to(device)
-    # actions = torch.zeros((args.num_steps, args.num_envs) + envs.single_action_space.shape).to(device)
     obs = torch.zeros((args.num_steps, args.num_envs) + observation_space).to(device)
     logic_obs = torch.zeros((args.num_steps, args.num_envs) + logic_observation_space).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + action_space).to(device)
@@ -241,16 +251,14 @@ def main(algorithm: str,
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
+    save_step_bar = args.save_steps
     start_time = time.time()
     next_logic_obs, next_obs = envs.reset()#(seed=seed)
     # 1 env 
     next_logic_obs = next_logic_obs.to(device)
     next_obs = torch.Tensor(next_obs).to(device)
-    # next_obs = torch.Tensor(next_obs).to(device)
-    # next_logic_obs = torch.Tensor(next_logic_obs).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
 
-    # next_obs_array = next_obs.detach().cpu().numpy()
     # # (1, 4, 84, 84)
     # for i in range(4):
     #     image = wandb.Image(next_obs_array[0][0], caption=f"State at global_step={global_step}_{i}")
@@ -309,16 +317,19 @@ def main(algorithm: str,
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
               
             # Save the model      
-            if int(global_step / args.num_envs) % save_steps == 0:
-                experiment_dir = OUT_PATH / "runs" / environment / label # / now.strftime("%y-%m-%d-%H-%M")
+            if global_step > save_step_bar:
+                experiment_dir = OUT_PATH / "runs" / run_name # / now.strftime("%y-%m-%d-%H-%M")
                 checkpoint_dir = experiment_dir / "checkpoints"
                 image_dir = experiment_dir / "images"
                 os.makedirs(checkpoint_dir, exist_ok=True)
                 os.makedirs(image_dir, exist_ok=True)
 
-                checkpoint_path = checkpoint_dir / f"step_{global_step}.pth"
+                checkpoint_path = checkpoint_dir / f"step_{save_step_bar}.pth"
                 agent.save(checkpoint_path, checkpoint_dir, [], [], [])
                 print("\nSaved model at:", checkpoint_path)
+                
+                # increase the updated bar
+                save_step_bar += args.save_steps
                 
                 # save hyper params
                 # save_hyperparams(signature=signature(main),
@@ -421,14 +432,7 @@ def main(algorithm: str,
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
         agent._print()
-        # wandb.log({"step": global_step})
         
-  
-        
-        # save_path = "out/deictic_ppo_{}.pth".format(args.env_id)
-        # torch.save(agent.state_dict(), save_path)
-        # print("Agent has been saved to {}".format(save_path))
-
 
     envs.close()
     writer.close()
@@ -437,13 +441,4 @@ def main(algorithm: str,
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) > 1:
-    #     config_path = IN_PATH / "config" /  sys.argv[1]
-    # else:
-    config_path = IN_PATH / "config" / "hybrid_meta_logic.yaml"
-    # config_path = IN_PATH / "config" / "hybrid_meta_neural.yaml"
-
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.Loader)
-
-    main(**config)
+    main()

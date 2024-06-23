@@ -22,3 +22,5 @@ test_predicate_global:1:image
 test_predicate_object:1:oplayer
 true_predicate:1:oplayer
 false_predicate:1:oplayer
+full_divers:1:image
+many_enemies:1:image

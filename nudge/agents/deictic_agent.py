@@ -85,11 +85,13 @@ class DeicticActor(nn.Module):
         
         # B * N_actions * 2
         weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
+        # weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
         
         # print(weights)
         
         # p = w1 * p_neural + w2 * p_logic
-        
+        # neural_action_probs: B * n_actions
+        # logic_action_probs: B * n_actions
         action_probs = weights[:,:,0] * neural_action_probs + weights[:,:,1] * logic_action_probs
         # merge action probs 
         # merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
@@ -106,16 +108,6 @@ class DeicticActor(nn.Module):
         neural_action_probs = self.to_neural_action_distribution(neural_state)
         return neural_action_probs
 
-
-    
-
-    # def select_policy(self, neural_state, logic_state):
-    #     V_T_meta = self.meta_actor(logic_state)
-    #     policy_probs = self.to_policy_distribution(V_T_meta)
-    #     return policy_probs
-        # policy_select_vector = F.gumbel_softmax(policy_probs)
-        # return policy_select_vector
-        
         
     def to_meta_policy_distribution(self, neural_state, logic_state):
         # get prob for neural and logic policy
@@ -146,16 +138,16 @@ class DeicticActor(nn.Module):
 
         # TODO: put dummy value to TAIL in case of no action predicate
         raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
+        raw_action_logits = torch.logit(raw_action_probs, eps=0.01)
         dist_values = []
         for i in range(len(env_action_names)):
             if i in self.env_action_id_to_action_pred_indices:
                 indices = torch.tensor(self.env_action_id_to_action_pred_indices[i], device=self.device)\
                     .expand(batch_size, -1).to(self.device)
-                gathered = torch.gather(raw_action_probs, 1, indices)
+                gathered = torch.gather(raw_action_logits, 1, indices)
                 # merged value for i-th action for samples in the batch
                 merged = softor(gathered, dim=1) # (batch_size, 1) 
                 dist_values.append(merged)
-        
         
         action_values = torch.stack(dist_values,dim=1) # (batch_size, n_actions) 
                 
@@ -206,26 +198,15 @@ class DeicticActorCritic(nn.Module):
         self.rng = random.Random() if rng is None else rng
         self.actor_mode = actor_mode
         self.meta_mode = meta_mode
-        # self.neural_a2c = ActorCritic(env, device=device)
-        # self.logic_a2c = NsfrActorCritic(env, rules, device=device)
         self.env = env
         self.rules = rules
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
-        # self.neural_actor = module.MLP(has_softmax=True, device=device)
-        # self.baseline_ppo = PPO("MlpPolicy", env.raw_env, verbose=1)
-        # self.baseline_ppo = load_pretrained_stable_baseline_ppo(env, device)
-        # self.visual_neural_actor = self.baseline_ppo.policy #.mlp_extractor.policy_net
-        # self.visual_neural_actor, self.critic = load_cleanrl_agent(env=env.raw_env, pretrained=False, device=device)
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
         
-        self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=False)
+        self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.meta_actor = get_meta_actor(env, rules, device, meta_mode=meta_mode, train=True)
-        # self.meta_actor = module.MLP(out_size=1, has_sigmoid=True, device=device)
         self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, actor_mode, meta_mode, device=device)
-        # self.critic = module.MLP(device=device, out_size=1, logic=True)
-        # self.critic = self.baseline_ppo.policy.mlp_extractor.value_net
-        # self.critic.to(device)
         
         # the number of actual actions on the environment
         self.num_actions = len(self.env.pred2action.keys())
@@ -280,8 +261,6 @@ class DeicticActorCritic(nn.Module):
         return self.actor.get_prednames()
     
     def get_action_and_value(self, neural_state, logic_state, action=None):
-        # test if it works -> nope
-        # return self.visual_neural_actor.get_action_and_value(neural_state)
         # compute action
         # n_envs * n_actions
         action_probs = self.actor(neural_state, logic_state)
@@ -310,186 +289,3 @@ class DeicticActorCritic(nn.Module):
             pickle.dump(step_list, f)
             pickle.dump(reward_list, f)
             pickle.dump(weight_list, f)
-
-
-class DeicticPPO(nn.Module):
-    # def __init__(self, env: NudgeBaseEnv, rules: str, lr_actor, lr_critic, optimizer,
-    #              gamma, epochs, eps_clip, device=None):
-    def __init__(self, env, rules, lr_actor, lr_critic, optimizer, gamma, epochs, eps_clip, actor_mode, meta_mode, device):
-        super(DeicticPPO, self).__init__()
-        self.device = device
-        self.actor_mode = actor_mode
-        self.meta_mode = meta_mode
-        # self.logic_ppo = LogicPPO(*logic_ppo_params)
-        # self.neural_ppo = NeuralPPO(*neural_ppo_params)
-        self.gamma = gamma
-        self.eps_clip = eps_clip
-        self.epochs = epochs
-        self.buffer = RolloutBuffer()
-        self.policy = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
-        # self.optimizer = optimizer([
-        #     # {'params': self.policy.logic_actor.parameters(), 'lr': lr_actor},
-        #     {'params': self.policy.meta_actor.parameters(), 'lr': lr_actor},
-        #     {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-        #     # {'params': self.policy.critic.parameters(), 'lr': lr_critic}
-        # ])
-        self.optimizer = optimizer(list(self.parameters()))
-
-        self.policy_old = DeicticActorCritic(env, rules, actor_mode, meta_mode, device)
-        self.policy_old.load_state_dict(self.policy.state_dict())
-        
-        self.prednames = self.get_prednames()
-
-        self.MseLoss = nn.MSELoss()
-        # self._freeze_neural_actor()
-        
-    # def get_action_and_value(next_obs):
-    #     neural_obs, logic_obs = next_obs
-    
-    def select_action(self, state, epsilon=0.0):
-        logic_state, neural_state = state
-        logic_state = torch.tensor(logic_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-        neural_state = torch.tensor(neural_state, dtype=torch.float32, device=self.device)#.unsqueeze(0)
-
-        # select random action with epsilon probability and policy probiability with 1-epsilon
-        with torch.no_grad():
-            # state = torch.FloatTensor(state).to(device)
-            # import ipdb; ipdb.set_trace()
-            # logic_action, logic_action_logprob = self.logic_ppo.policy_old.act(logic_state, epsilon=epsilon)
-            # neural_action, neural_action_logprob = self.neural_ppo.policy_old.act(neural_state, epsilon=epsilon)
-            action, action_logprob = self.policy_old.act(neural_state, logic_state, epsilon=epsilon)
-        
-        self.buffer.neural_states.append(neural_state)
-        self.buffer.logic_states.append(logic_state)
-        action = torch.squeeze(action)
-        self.buffer.actions.append(action)
-        action_logprob = torch.squeeze(action_logprob)
-        self.buffer.logprobs.append(action_logprob)
-
-        return action
-        # predicate = self.prednames[action.item()]
-        # return predicate
-
-    def update(self):
-        # Monte Carlo estimate of returns
-        rewards = []
-        discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
-
-        # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
-        # convert list to tensor
-
-        # old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0)).detach().to(self.device)
-        old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0), dim=1).detach().to(self.device)
-        # print(old_neural_states.size())
-        old_logic_states = torch.squeeze(torch.stack(self.buffer.logic_states, dim=0)).detach().to(self.device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
-
-        total_loss = 0
-        # Optimize policy for K epochs
-        for _ in range(self.epochs):
-            # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_neural_states, old_logic_states,
-                                                                        old_actions)
-
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
-
-            # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
-
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-
-            # final loss of clipped objective PPO
-            # training does not converge if the entropy term is added ...
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards)  # - 0.01*dist_entropy
-
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            total_loss += loss.mean().item()
-            # for name, param in self.policy.named_parameters():
-            #     print(name, param.grad)
-            self.optimizer.step()
-            # wandb.log({"loss": loss})
-
-        # Copy new weights into old policy
-        self.policy_old.load_state_dict(self.policy.state_dict())
-
-        # clear buffer
-        self.buffer.clear()
-        
-        avg_loss = total_loss / self.epochs
-        return avg_loss
-        
-        
-    def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):
-        torch.save(self.policy_old.state_dict(), checkpoint_path)
-        with open(directory / "data.pkl", "wb") as f:
-            pickle.dump(step_list, f)
-            pickle.dump(reward_list, f)
-            pickle.dump(weight_list, f)
-
-    def load(self, directory: Path):
-        self.neural_ppo.load(directory)
-        self.logic_ppo.load(directory)
-        # only for recover form crash
-        model_name = input('Enter file name: ')
-        model_file = os.path.join(directory, model_name)
-        self.policy_old.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
-        self.policy.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
-        with open(directory / "data.pkl", "rb") as f:
-            step_list = pickle.load(f)
-            reward_list = pickle.load(f)
-            weight_list = pickle.load(f)
-        return step_list, reward_list, weight_list
-
-    def get_predictions(self, state):
-        self.prediction = state
-        return self.prediction
-
-    def get_weights(self):
-        return self.policy.actor.get_params()
-
-    def get_prednames(self):
-        return self.policy.logic_actor.get_prednames()
-    
-    def _freeze_neural_actor(self):
-        for param in self.policy.visual_neural_actor.parameters():
-            param.requires_grad = False
-        for param in self.policy_old.visual_neural_actor.parameters():
-            param.requires_grad = False
-
-
-        
-        
-
-class RolloutBuffer:
-    def __init__(self):
-        self.actions = []
-        self.neural_states = []
-        self.logic_states = []
-        self.logprobs = []
-        self.rewards = []
-        self.is_terminals = []
-        self.predictions = []
-
-    def clear(self):
-        del self.actions[:]
-        del self.neural_states[:]
-        del self.logic_states[:]
-        del self.logprobs[:]
-        del self.rewards[:]
-        del self.is_terminals[:]
-        del self.predictions[:]

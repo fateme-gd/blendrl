@@ -44,13 +44,13 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 5000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
     num_envs: int = 1
     """the number of parallel game environments"""
-    num_steps: int = 128
+    num_steps: int = 1024
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
@@ -337,10 +337,11 @@ if __name__ == "__main__":
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
         print("SPS:", int(global_step / (time.time() - start_time)))
         writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
-        
-        # save_path = "out/ppo_{}.pth".format(args.env_id)
-        # torch.save(agent.state_dict(), save_path)
-        # print("Agent has been saved to {}".format(save_path))
+    
+    # save the trained agent    
+    save_path = "out/neural_ppo_agent_{}.pth".format(args.env_id)
+    torch.save(agent.state_dict(), save_path)
+    print("Agent has been saved to {}".format(save_path))
 
 
     envs.close()

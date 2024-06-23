@@ -1,5 +1,6 @@
 noop:1:image
 up_air:1:image
+up_rescue:1:image
 fire_left:1:image
 fire_right:1:image
 left_aim:1:image

@@ -3,6 +3,22 @@ import torch as th
 from nsfr.utils.common import bool_to_probs
 
 
+def full_divers(objs: th.Tensor) -> th.Tensor:
+    # objs: batch_size, 43, 4
+    # result = th.tensor(False)
+    divers_vs = objs[:, -6:]
+    num_collected_divers = th.sum(divers_vs[:,:,0], dim=1)
+    result = num_collected_divers == 6
+    return bool_to_probs(result)
+
+def many_enemies(objs: th.Tensor) -> th.Tensor:
+    # enemies_vs = objs[:, ]
+    enemies_vs = th.cat([objs[:, 5:30], objs[:, 31:35]], dim=1)
+    num_enemies = th.sum(enemies_vs[:,:,0], dim=1)
+    result = num_enemies >= 4
+    return bool_to_probs(result)
+
+
 def visible_missile(obj: th.Tensor) -> th.Tensor:
     result = obj[..., 0] == 1
     return bool_to_probs(result)
@@ -91,8 +107,23 @@ def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = th.clip((64 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 64, 0, 1)
+    result = th.clip((200 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 200, 0, 1)
     return result
+
+def _not_close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    player_x = player[..., 1]
+    player_y = player[..., 2]
+    obj_x = obj[..., 1]
+    obj_y = obj[..., 2]
+    result = th.clip((abs(player_x - obj_x) + abs(player_y - obj_y) - 64) / 64, 0, 1)
+    return result
+
+def not_close_by_missile(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _not_close_by(player, obj)
+
+
+def not_close_by_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _not_close_by(player, obj)
 
 
 def left_of_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:

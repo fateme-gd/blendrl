@@ -1,7 +1,7 @@
 import os
 
 from nsfr.facts_converter import FactsConverter
-from nsfr.utils.logic import get_lang, get_meta_lang, build_infer_module
+from nsfr.utils.logic import get_lang, get_blender_lang, build_infer_module
 from nsfr.nsfr import NSFReasoner
 from nsfr.valuation import ValuationModule
 
@@ -29,12 +29,12 @@ def get_nsfr_model(env_name: str, rules: str, device: str, train=False):
     return NSFR
 
 
-def get_meta_nsfr_model(env_name: str, rules: str, device: str, train=False, mode='normal'):
+def get_blender_nsfr_model(env_name: str, rules: str, device: str, train=False, mode='normal'):
     current_path = os.path.dirname(__file__)
     lark_path = os.path.join(current_path, 'lark/exp.lark')
     lang_base_path = f"in/envs/{env_name}/logic/"
 
-    lang, clauses, bk, atoms = get_meta_lang(lark_path, lang_base_path, rules)
+    lang, clauses, bk, atoms = get_blender_lang(lark_path, lang_base_path, rules)
 
     val_fn_path = f"in/envs/{env_name}/valuation.py"
     val_module = ValuationModule(val_fn_path, lang, device)

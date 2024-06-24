@@ -9,7 +9,7 @@ import re
 
 from .agents.logic_agent import NsfrActorCritic
 from .agents.neural_agent import ActorCritic
-from .agents.deictic_agent import DeicticActorCritic
+from .agents.blender_agent import BlenderActorCritic
 from nudge.env import NudgeBaseEnv
 from functools import reduce
  
@@ -103,7 +103,7 @@ def load_model(model_dir,
     elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
     else:
-        model = DeicticActorCritic(env, rules=rules, actor_mode=config["actor_mode"], meta_mode=config["meta_mode"], device=device).to(device)
+        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], device=device).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:

@@ -1,6 +1,6 @@
 import torch
 import gymnasium as gym
-from nsfr.common import get_nsfr_model, get_meta_nsfr_model
+from nsfr.common import get_nsfr_model, get_blender_nsfr_model
 from nsfr.utils.common import load_module
 import torch
 import torch.nn as nn
@@ -15,7 +15,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
 
-class NeuralMetaActor(nn.Module):
+class NeuralBlenderActor(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
@@ -66,12 +66,12 @@ class CNNActor(nn.Module):
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
-def get_meta_actor(env, meta_rules, device, train=True, meta_mode='logic'):
-    assert meta_mode in ['logic', 'neural']
-    if meta_mode == 'logic':
-        return get_meta_nsfr_model(env.name, meta_rules, device, train=train)
-    if meta_mode == 'neural':
-        net = NeuralMetaActor()
+def get_blender(env, blender_rules, device, train=True, blender_mode='logic'):
+    assert blender_mode in ['logic', 'neural']
+    if blender_mode == 'logic':
+        return get_blender_nsfr_model(env.name, blender_rules, device, train=train)
+    if blender_mode == 'neural':
+        net = NeuralBlenderActor()
         net.to(device)
         return net
         # mlp_module_path = f"in/envs/{env.name}/mlp.py"
@@ -80,7 +80,7 @@ def get_meta_actor(env, meta_rules, device, train=True, meta_mode='logic'):
     
     
 def extract_policy_probs(NSFR, V_T, device):
-    """not to be used. meta actor already computes this in the forward function."""
+    """not to be used. blender actor already computes this in the forward function."""
     batch_size = V_T.size(0)
     # extract neural_agent(img) and logic_agent(image)
     indices = []

@@ -22,7 +22,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 )
 
 # added
-from nudge.agents.deictic_agent import DeicticActorCritic
+from nudge.agents.blender_agent import BlenderActorCritic
 from nudge.env_vectorized import VectorizedNudgeBaseEnv
 import csv
 import os
@@ -127,7 +127,7 @@ class Args:
     """the name of the environment"""
     algorithm: str = "deictic"
     """the algorithm used in the agent"""
-    meta_mode: str = "logic"
+    blender_mode: str = "logic"
     """the mode for the blender"""
     actor_mode: str = "hybrid"
     """the mode for the agent"""
@@ -148,7 +148,7 @@ def main():
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    model_description = "actor_{}_blender_{}".format(args.actor_mode, args.meta_mode)
+    model_description = "actor_{}_blender_{}".format(args.actor_mode, args.blender_mode)
     learning_description = f"lr_{args.learning_rate}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_id}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
@@ -177,7 +177,7 @@ def main():
 
     envs = VectorizedNudgeBaseEnv.from_name(args.env_name, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
 
-    agent = DeicticActorCritic(envs, args.rules, args.actor_mode, args.meta_mode, device)
+    agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, device)
     if args.pretrained:
         agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))
         agent.to(device)
@@ -187,8 +187,8 @@ def main():
         wandb.watch(agent)
         
     rtpt.start()
-    parameters = list(agent.logic_actor.parameters()) + list(agent.meta_actor.parameters())
-    # parameters = list(agent.visual_neural_actor.parameters()) + list(agent.logic_actor.parameters()) + list(agent.meta_actor.parameters())
+    parameters = list(agent.logic_actor.parameters()) + list(agent.blender.parameters())
+    # parameters = list(agent.visual_neural_actor.parameters()) + list(agent.logic_actor.parameters()) + list(agent.blender.parameters())
     # optimizer = optim.Adam(parameters, lr=args.learning_rate, eps=1e-5)
     if not args.joint_training:
         if args.algorithm == "deictic":
@@ -196,7 +196,7 @@ def main():
                 [
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
                     {"params": agent.logic_actor.parameters()},
-                    {"params": agent.meta_actor.parameters()},
+                    {"params": agent.blender.parameters()},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
@@ -206,7 +206,7 @@ def main():
                 [
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
                     {"params": agent.logic_actor.parameters()},
-                    {"params": agent.meta_actor.parameters(), "lr": 2.5e-4},
+                    {"params": agent.blender.parameters(), "lr": 2.5e-4},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
@@ -217,7 +217,7 @@ def main():
                 [
                     {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
                     {"params": agent.logic_actor.parameters()},
-                    {"params": agent.meta_actor.parameters()},
+                    {"params": agent.blender.parameters()},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
@@ -227,7 +227,7 @@ def main():
                 [
                     {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
                     {"params": agent.logic_actor.parameters()},
-                    {"params": agent.meta_actor.parameters(), "lr": 2.5e-4},
+                    {"params": agent.blender.parameters(), "lr": 2.5e-4},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5

@@ -23,7 +23,7 @@ def get_lang(lark_path, lang_base_path, dataset):
     return lang, clauses, bk, atoms
 
 
-def get_meta_lang(lark_path, lang_base_path, dataset):
+def get_blender_lang(lark_path, lang_base_path, dataset):
     """Load the language of first-order logic from files.
 
     Read the language, clauses, background knowledge from files.

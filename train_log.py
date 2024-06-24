@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from nudge.agents.logic_agent import LogicPPO
 from nudge.agents.neural_agent import NeuralPPO
-from nudge.agents.deictic_agent import DeicticPPO
+from nudge.agents.blender_agent import DeicticPPO
 from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
 from nudge.utils import exp_decay, get_action_stats

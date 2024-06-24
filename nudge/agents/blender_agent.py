@@ -18,18 +18,18 @@ from torch.distributions import Categorical
 from nsfr.utils.common import load_module
 from nsfr.common import get_nsfr_model
 
-from utils import get_meta_actor, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
+from utils import get_blender, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
 
 
-class DeicticActor(nn.Module):
-    def __init__(self, env, neural_actor, logic_actor, meta_actor, actor_mode, meta_mode, device=None):
-        super(DeicticActor, self).__init__()
+class BlenderActor(nn.Module):
+    def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, device=None):
+        super(BlenderActor, self).__init__()
         self.env = env
         self.neural_actor = neural_actor
         self.logic_actor = logic_actor
-        self.meta_actor = meta_actor
+        self.blender = blender
         self.actor_mode = actor_mode
-        self.meta_mode = meta_mode
+        self.blender_mode = blender_mode
         self.device = device
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
@@ -76,7 +76,7 @@ class DeicticActor(nn.Module):
         # ones = torch.ones_like(beta).to(self.device)
         
         # B * 2
-        weights = self.to_meta_policy_distribution(neural_state, logic_state)
+        weights = self.to_blender_policy_distribution(neural_state, logic_state)
         # save weights
         self.w_policy = weights[0]
         
@@ -109,15 +109,15 @@ class DeicticActor(nn.Module):
         return neural_action_probs
 
         
-    def to_meta_policy_distribution(self, neural_state, logic_state):
+    def to_blender_policy_distribution(self, neural_state, logic_state):
         # get prob for neural and logic policy
-        # probs = extract_policy_probs(self.meta_actor, V_T, self.device)
+        # probs = extract_policy_probs(self.blender, V_T, self.device)
         # to logit
-        assert self.meta_mode in ['logic', 'neural'], "Invalid meta mode {}".format(self.meta_mode)
-        if self.meta_mode == 'logic':
-            policy_probs = self.meta_actor(logic_state)
+        assert self.blender_mode in ['logic', 'neural'], "Invalid blender mode {}".format(self.blender_mode)
+        if self.blender_mode == 'logic':
+            policy_probs = self.blender(logic_state)
         else:
-            policy_probs = self.meta_actor(neural_state)
+            policy_probs = self.blender(neural_state)
             
         logits = torch.logit(policy_probs, eps=0.01)
         # return torch.softmax(logits, dim=1)
@@ -191,13 +191,13 @@ class DeicticActor(nn.Module):
     
         
 
-class DeicticActorCritic(nn.Module):
-    def __init__(self, env, rules, actor_mode, meta_mode, device, rng=None):
-        super(DeicticActorCritic, self).__init__()
+class BlenderActorCritic(nn.Module):
+    def __init__(self, env, rules, actor_mode, blender_mode, device, rng=None):
+        super(BlenderActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
         self.actor_mode = actor_mode
-        self.meta_mode = meta_mode
+        self.blender_mode = blender_mode
         self.env = env
         self.rules = rules
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
@@ -205,8 +205,8 @@ class DeicticActorCritic(nn.Module):
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
         
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-        self.meta_actor = get_meta_actor(env, rules, device, meta_mode=meta_mode, train=True)
-        self.actor = DeicticActor(env, self.visual_neural_actor, self.logic_actor, self.meta_actor, actor_mode, meta_mode, device=device)
+        self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
+        self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, device=device)
         
         # the number of actual actions on the environment
         self.num_actions = len(self.env.pred2action.keys())
@@ -218,9 +218,9 @@ class DeicticActorCritic(nn.Module):
         
 
     def _print(self):
-        if self.meta_mode == 'logic':
-            print("==== Meta Policy ====")
-            self.meta_actor.print_program()
+        if self.blender_mode == 'logic':
+            print("==== Blender ====")
+            self.blender.print_program()
         print("==== Logic Policy ====")
         self.logic_actor.print_program()
         

@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F 
 from .logic_agent import LogicPPO, NsfrActorCritic
 from .neural_agent import NeuralPPO, ActorCritic
-from neumann.src.torch_utils import softor
+from nudge.torch_utils import softor
 # from nudge.env import NudgeBaseEnv
 from torch.distributions.categorical import Categorical
 

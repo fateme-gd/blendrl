@@ -1,8 +1,9 @@
-# BlendeRL: Blending Neural and Symbolic Policies
+# BlendeRL: Blending Neural and Logic Policies
 <!-- This is the implementation of **Neurally gUided Differentiable loGic policiEs (NUDGE)**, a framework for logic RL agents based on differentiable forward reasoning with first-order logic (FOL).
 ![](docs/LogicRL.png) -->
 
-![](assets/blenderl.png)
+<img src="assets/blenderl.png" alt="drawing" height="200"/>
+
 ## Quickstart
 
 1. Install all requirements via

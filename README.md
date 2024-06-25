@@ -5,13 +5,26 @@
 <img src="assets/blenderl.png" alt="drawing" height="200"/>
 
 ## Quickstart
+Install `nsfr` and `nudge`.
 
+Training script:
+```
+python ppo_atari_vectorized.py --track --pretrained --num-steps=512 
+```
+- --track: activate wandb tracking
+- --pretrained: use a pretrained neural agent
+- --num-steps: the number of steps for policy rollout
+<!--
 1. Install all requirements via
     ```bash
     pip install -r requirements.txt
     ```
 2. On project level, simply run `python train.py` to start a new training run.
-
+-->
+Play script:
+```
+python play_gui.py
+```
 ## How to Use
 ### Hyperparameters
 The hyperparameters are configured inside `in/config/default.yaml` which is loaded as default. You can specify a different configuration by providing the corresponding YAML file path as an argument, e.g., `python train.py in/config/my_config.yaml`. A description of all hyperparameters can be found in `train.py`.

@@ -31,6 +31,6 @@ class MLP(torch.nn.Module):
         self.mlp.to(device)
 
     def forward(self, state):
-        features = state.float()
+        features = state.float().view(-1, self.num_in_features)
         y = self.mlp(features)
         return y

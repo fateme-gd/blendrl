@@ -191,7 +191,7 @@ def main():
     # parameters = list(agent.visual_neural_actor.parameters()) + list(agent.logic_actor.parameters()) + list(agent.blender.parameters())
     # optimizer = optim.Adam(parameters, lr=args.learning_rate, eps=1e-5)
     if not args.joint_training:
-        if args.algorithm == "blend":
+        if args.algorithm == "blender":
             optimizer = optim.Adam(
                 [
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
@@ -212,7 +212,7 @@ def main():
                 eps = 1e-5
             )
     else:
-        if args.algorithm == "blend":
+        if args.algorithm == "blender":
             optimizer = optim.Adam(
                 [
                     {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},

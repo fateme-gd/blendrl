@@ -60,20 +60,14 @@ class BlenderActor(nn.Module):
         return env_action_id_to_action_pred_indices
         
     def compute_action_probs_hybrid(self, neural_state, logic_state):
-        # logic_action_probs = self.logic_a2c.actor(logic_state)
-        # neural_action_probs = self.neural_a2c.actor(neural_state)
         # state: B * N
         batch_size = neural_state.size(0)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
-        # neural_action_probs = self.neural_actor(neural_state)
         neural_action_probs = self.to_neural_action_distribution(neural_state)
         
         # action_probs: B * N_actions
         # beta = self.switch(neural_state)
         batch_size = neural_state.size(0)
-        # beta = torch.tensor([[0.5]]).repeat(batch_size, 1).to(self.device)
-        # beta = torch.tensor([[1.0]]).repeat(batch_size, 1).to(self.device)
-        # ones = torch.ones_like(beta).to(self.device)
         
         # B * 2
         weights = self.to_blender_policy_distribution(neural_state, logic_state)
@@ -84,19 +78,12 @@ class BlenderActor(nn.Module):
         n_actions = neural_action_probs.size(1)
         
         # B * N_actions * 2
-        weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
-        # weights = weights.unsqueeze(1).repeat(1, n_actions, 1)  
-        
-        # print(weights)
-        
+        weights_expanded = weights.unsqueeze(1).repeat(1, n_actions, 1)  
         # p = w1 * p_neural + w2 * p_logic
         # neural_action_probs: B * n_actions
         # logic_action_probs: B * n_actions
-        action_probs = weights[:,:,0] * neural_action_probs + weights[:,:,1] * logic_action_probs
-        # merge action probs 
-        # merged_values = softor([logic_action_probs, neural_action_probs], dim=1)
-        # action_probs = torch.softmax(merged_values, dim=0)
-        return action_probs
+        action_probs = weights_expanded[:,:,0] * neural_action_probs + weights_expanded[:,:,1] * logic_action_probs
+        return action_probs, weights
     
     def compute_action_probs_logic(self, logic_state):
         self.w_policy = torch.tensor([0.0, 1.0], device=self.device)
@@ -120,11 +107,7 @@ class BlenderActor(nn.Module):
             policy_probs = self.blender(neural_state)
             
         logits = torch.logit(policy_probs, eps=0.01)
-        # return torch.softmax(logits, dim=1)
         return F.gumbel_softmax(logits, dim=1)
-        # take softmax
-        # dist = torch.softmax(logits, dim=1)
-        # return dist
     
     
     def to_action_distribution(self, raw_action_probs):
@@ -134,9 +117,6 @@ class BlenderActor(nn.Module):
         batch_size = raw_action_probs.size(0)
         env_action_names = list(self.env.pred2action.keys())        
         
-        # action_probs = torch.zeros(len(env_action_names))
-
-        # TODO: put dummy value to TAIL in case of no action predicate
         raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
         raw_action_logits = torch.logit(raw_action_probs, eps=0.01)
         dist_values = []
@@ -150,23 +130,12 @@ class BlenderActor(nn.Module):
                 dist_values.append(merged)
         
         action_values = torch.stack(dist_values,dim=1) # (batch_size, n_actions) 
-                
-                
-        # action_raw_dist = torch.stack([softor(action_values, dim=1) for action_values in dist_values])
         action_dist = torch.softmax(action_values, dim=1)
         
-        # if action_dist.size(1) < self.env.n_raw_actions:
-        #     zeros = torch.zeros(batch_size, self.env.n_raw_actions - action_dist.size(1), device=self.device, requires_grad=True)
-        #     action_dist = torch.cat([action_dist, zeros], dim=1)
         action_dist = self.reshape_action_distribution(action_dist)
         return action_dist
         
     def to_neural_action_distribution(self, neural_state):
-        # actions, values, log_prob = self.neural_actor(neural_state)
-        # action_dist = torch.softmax(values, dim=1)
-        
-        # action_dist = self.reshape_action_distribution(action_dist)
-        # action_dist = self.neural_actor.get_distribution(neural_state).distribution.probs
         hidden = self.neural_actor.network(neural_state)
         logits = self.neural_actor.actor(hidden)
         probs = Categorical(logits=logits)
@@ -203,8 +172,8 @@ class BlenderActorCritic(nn.Module):
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
-        
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
+        self.logic_critic = module.MLP(device=device, out_size=1, logic=True)
         self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
         self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, device=device)
         
@@ -263,24 +232,30 @@ class BlenderActorCritic(nn.Module):
     def get_action_and_value(self, neural_state, logic_state, action=None):
         # compute action
         # n_envs * n_actions
-        action_probs = self.actor(neural_state, logic_state)
+        action_probs, blending_weights = self.actor(neural_state, logic_state)
         dist = Categorical(action_probs)
         if action is None:
             action = dist.sample()
-        # action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
-        # if torch.numel(action) > 1:
-        #     action = action[0]
         logprob = dist.log_prob(action)
         
         # compute value
+        # batch_size * 1
+        neural_value = self.get_neural_value(neural_state)
+        logic_value = self.get_logic_value(logic_state)
+        blended_value = (blending_weights[:,0] * neural_value.squeeze(1) + blending_weights[:,1] * logic_value.squeeze(1)).unsqueeze(1)
+
+        return action, logprob, dist.entropy(), blended_value
+    
+    def get_neural_value(self, neural_state):
         value = self.visual_neural_actor.get_value(neural_state)
-        
-        # action, action_logprob = self.act(neural_state, logic_state, epsilon=epsilon)
-        # print(action, dist.probs)
-        return action, logprob, dist.entropy(), value
+        return value
+    
+    def get_logic_value(self, logic_state):
+        value = self.logic_critic(logic_state)
+        return value
     
     def get_value(self, neural_state, logic_state):
-        value = self.visual_neural_actor.get_value(neural_state)
+        _, _, _, value = self.get_action_and_value(neural_state, logic_state)
         return value
     
     def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):

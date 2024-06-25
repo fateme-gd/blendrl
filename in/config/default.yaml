@@ -1,4 +1,4 @@
-algorithm: deictic
+algorithm: blend
 environment: seaquest
 rules: default
 update_steps: 1024

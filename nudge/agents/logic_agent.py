@@ -10,6 +10,7 @@ from torch.distributions import Categorical
 from nsfr.common import get_nsfr_model
 from nsfr.utils.common import load_module
 from nudge.env import NudgeBaseEnv
+from nudge.torch_utils import softor
 
 
 class NsfrActorCritic(nn.Module):
@@ -30,9 +31,15 @@ class NsfrActorCritic(nn.Module):
             torch.tensor([1.0 / self.num_actions for _ in range(self.num_actions)], device=device))
         self.upprior = Categorical(
             torch.tensor([0.9] + [0.1 / (self.num_actions-1) for _ in range(self.num_actions-1)], device=device))
+        
+        self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
 
     def forward(self):
         raise NotImplementedError
+    
+    def _print(self):
+        print("==== Logic Policy ====")
+        self.actor.print_program()
 
     def act(self, logic_state, epsilon=0.0):
         action_probs = self.actor(logic_state)
@@ -62,195 +69,87 @@ class NsfrActorCritic(nn.Module):
 
     def get_prednames(self):
         return self.actor.get_prednames()
-
-
-class LogicPPO:
-    def __init__(self, env: NudgeBaseEnv, rules: str, lr_actor, lr_critic, optimizer,
-                 gamma, epochs, eps_clip, device=None):
-        self.device = device
-        self.gamma = gamma
-        self.eps_clip = eps_clip
-        self.epochs = epochs
-        self.buffer = RolloutBuffer()
-        self.policy = NsfrActorCritic(env, rules, device=device).to(device)
-        self.optimizer = optimizer([
-            {'params': self.policy.actor.get_params(), 'lr': lr_actor},
-            {'params': self.policy.critic.parameters(), 'lr': lr_critic}
-        ])
-
-        self.policy_old = NsfrActorCritic(env, rules, device=device).to(device)
-        self.policy_old.load_state_dict(self.policy.state_dict())
-        self.MseLoss = nn.MSELoss()
-        self.prednames = self.get_prednames()
-
-    def select_action(self, state, epsilon=0.0):
-        logic_state, neural_state = state
-        logic_state = torch.tensor(logic_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-        neural_state = torch.tensor(neural_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-
-        # select random action with epsilon probability and policy probiability with 1-epsilon
-        with torch.no_grad():
-            # state = torch.FloatTensor(state).to(device)
-            # import ipdb; ipdb.set_trace()
-            action, action_logprob = self.policy_old.act(logic_state, epsilon=epsilon)
+    
+    def get_action_and_value(self, neural_state, logic_state, action=None):
+        # compute action
+        # n_envs * n_actions
         
-        self.buffer.neural_states.append(neural_state)
-        self.buffer.logic_states.append(logic_state)
-        action = torch.squeeze(action)
-        self.buffer.actions.append(action)
-        action_logprob = torch.squeeze(action_logprob)
-        self.buffer.logprobs.append(action_logprob)
+        action_probs = self.to_action_distribution(self.actor(logic_state))
+        # action_probs  = self.actor(logic_state)
+        dist = Categorical(action_probs)
+        if action is None:
+            action = dist.sample()
+        logprob = dist.log_prob(action)
+        
+        # compute value
+        # batch_size * 1
+        value = self.critic(logic_state)
 
-        predicate = self.prednames[action.item()]
-        return predicate
-
-    def update(self):
-        # Monte Carlo estimate of returns
-        rewards = []
-        discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
-
-        # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
-        # convert list to tensor
-
-        old_neural_states = torch.squeeze(torch.stack(self.buffer.neural_states, dim=0)).detach().to(self.device)
-        old_logic_states = torch.squeeze(torch.stack(self.buffer.logic_states, dim=0)).detach().to(self.device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
-
-        # Optimize policy for K epochs
-        for _ in range(self.epochs):
-            # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_neural_states, old_logic_states,
-                                                                        old_actions)
-
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
-
-            # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
-
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-
-            # final loss of clipped objective PPO
-            # training does not converge if the entropy term is added ...
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards)  # - 0.01*dist_entropy
-
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
-            # wandb.log({"loss": loss})
-
-        # Copy new weights into old policy
-        self.policy_old.load_state_dict(self.policy.state_dict())
-
-        # clear buffer
-        self.buffer.clear()
-
+        return action, logprob, dist.entropy(), value
+    
+    def get_value(self, neural_state, logic_state):
+        _, _, _, value = self.get_action_and_value(neural_state, logic_state)
+        return value
+    
     def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):
-        torch.save(self.policy_old.state_dict(), checkpoint_path)
+        torch.save(self.state_dict(), checkpoint_path)
         with open(directory / "data.pkl", "wb") as f:
             pickle.dump(step_list, f)
             pickle.dump(reward_list, f)
             pickle.dump(weight_list, f)
+            
+    def _build_action_id_dict(self):
+        env_action_names = list(self.env.pred2action.keys())
+        # action_probs = torch.zeros(len(env_action_names))
+        env_action_id_to_action_pred_indices = {}
+        # init dic
+        for i, env_action_name in enumerate(env_action_names):
+            env_action_id_to_action_pred_indices[i] = []
+            
+        for i, env_action_name in enumerate(env_action_names):
+            exist_flag = False
+            for j,action_pred_name in enumerate(self.actor.get_prednames()):
+                if env_action_name in action_pred_name:
+                    #if i not in env_action_id_to_action_pred_indices:
+                    #    env_action_id_to_action_pred_indices[i] = []
+                    env_action_id_to_action_pred_indices[i].append(j)
+                    exist_flag = True
+            if not exist_flag:
+                # i-th env action is not defined by any rules thus will be always 0.0
+                # refer to dummy predicte index
+                # pred1, pred2, ..., predn, dummy_pred
+                dummy_index = len(self.actor.get_prednames())
+                env_action_id_to_action_pred_indices[i].append(dummy_index)
 
-    def load(self, directory: Path):
-        # only for recover form crash
-        model_name = input('Enter file name: ')
-        model_file = os.path.join(directory, model_name)
-        self.policy_old.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
-        self.policy.load_state_dict(torch.load(model_file, map_location=lambda storage, loc: storage))
-        with open(directory / "data.pkl", "rb") as f:
-            step_list = pickle.load(f)
-            reward_list = pickle.load(f)
-            weight_list = pickle.load(f)
-        return step_list, reward_list, weight_list
-
-    def get_predictions(self, state):
-        self.prediction = state
-        return self.prediction
-
-    def get_weights(self):
-        return self.policy.actor.get_params()
-
-    def get_prednames(self):
-        return self.policy.actor.get_prednames()
-
-
-class LogicPlayer:
-    def __init__(self, args, model):
-        self.args = args
-        self.model = model
-        self.prednames = model.get_prednames()
-
-        env_name = self.args.env
-
-        state_extraction_module_path = f"../envs/{env_name}/state_extraction.py"
-        module = load_module(state_extraction_module_path)
-        self.extract_logic_state = module.extract_logic_state
-
-        action_mapping_module_path = f"../envs/{env_name}/actions.py"
-        module = load_module(action_mapping_module_path)
-        self.pred2action = module.pred2action
-
-    def act(self, state):
-        extracted_state = self.extract_logic_state(state, variant=self.args.env)  # TODO: rename arg.env
-        predictions = self.model(extracted_state)
-        prediction = torch.argmax(predictions).cpu().item()
-        explaining = self.prednames[prediction]
-        action = self.pred2action(prediction, self.prednames)
-        return action, explaining
-
-    def get_probs(self):
-        probs = self.model.get_probs()
-        return probs
-
-    def get_explaining(self):
-        explaining = 0
-        return explaining
-
-    def get_state(self, raw_state):
-        env_name = self.args.env
-        state_extraction_module_path = f"../envs/{env_name}/state_extraction.py"
-        module = load_module(state_extraction_module_path)
-
-        logic_state = module.extract_logic_state(raw_state)  # TODO: enable custom args
-        logic_state = torch.tensor(logic_state, dtype=torch.float32, device=self.device).unsqueeze(0)
-
-        logic_state = logic_state.tolist()
-        result = []
-        for list in logic_state:
-            obj_state = [round(num, 2) for num in list]
-            result.append(obj_state)
-        return result
-
-
-class RolloutBuffer:
-    def __init__(self):
-        self.actions = []
-        self.neural_states = []
-        self.logic_states = []
-        self.logprobs = []
-        self.rewards = []
-        self.is_terminals = []
-        self.predictions = []
-
-    def clear(self):
-        del self.actions[:]
-        del self.neural_states[:]
-        del self.logic_states[:]
-        del self.logprobs[:]
-        del self.rewards[:]
-        del self.is_terminals[:]
-        del self.predictions[:]
+                
+        return env_action_id_to_action_pred_indices
+    
+    def to_action_distribution(self, raw_action_probs):
+        """Converts raw action probabilities to a distribution."""
+        batch_size = raw_action_probs.size(0)
+        env_action_names = list(self.env.pred2action.keys())        
+        
+        raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
+        raw_action_logits = torch.logit(raw_action_probs, eps=0.01)
+        dist_values = []
+        for i in range(len(env_action_names)):
+            if i in self.env_action_id_to_action_pred_indices:
+                indices = torch.tensor(self.env_action_id_to_action_pred_indices[i], device=self.device)\
+                    .expand(batch_size, -1).to(self.device)
+                gathered = torch.gather(raw_action_logits, 1, indices)
+                # merged value for i-th action for samples in the batch
+                merged = softor(gathered, dim=1) # (batch_size, 1) 
+                dist_values.append(merged)
+        
+        action_values = torch.stack(dist_values,dim=1) # (batch_size, n_actions) 
+        action_dist = torch.softmax(action_values, dim=1)
+        
+        action_dist = self.reshape_action_distribution(action_dist)
+        return action_dist
+    
+    def reshape_action_distribution(self, action_dist):
+        batch_size = action_dist.size(0)
+        if action_dist.size(1) < self.env.n_raw_actions:
+            zeros = torch.zeros(batch_size, self.env.n_raw_actions - action_dist.size(1), device=self.device, requires_grad=True)
+            action_dist = torch.cat([action_dist, zeros], dim=1)
+        return action_dist

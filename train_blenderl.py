@@ -83,8 +83,6 @@ class Args:
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
-    learning_rate: float = 2.5e-3
-    """the learning rate of the optimizer"""
     num_envs: int = 10
     """the number of parallel game environments"""
     num_steps: int = 512 #128
@@ -139,6 +137,10 @@ class Args:
     """to use pretrained neural agent"""
     joint_training: bool = False
     """jointly train neural actor and logic actor and blender"""
+    learning_rate: float = 2.5e-5
+    """the learning rate of the optimizer (neural)"""
+    logic_learning_rate: float = 2.5e-3
+    """the learning rate of the optimizer (logic)"""
 
 
 def main():
@@ -195,29 +197,32 @@ def main():
             optimizer = optim.Adam(
                 [
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
-                    {"params": agent.logic_actor.parameters()},
-                    {"params": agent.blender.parameters()},
+                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
                 ],
-                lr=args.learning_rate,
+                # lr=args.learning_rate,
                 eps = 1e-5
             )
         elif args.algorithm == "neural":
             optimizer = optim.Adam(
                 [
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
-                    {"params": agent.logic_actor.parameters()},
-                    {"params": agent.blender.parameters(), "lr": 2.5e-4},
+                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
                 ],
-                lr=args.learning_rate,
+                # lr=args.learning_rate,
                 eps = 1e-5
             )
     else:
         if args.algorithm == "blender":
             optimizer = optim.Adam(
                 [
-                    {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
-                    {"params": agent.logic_actor.parameters()},
-                    {"params": agent.blender.parameters()},
+                    {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
+                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
@@ -225,11 +230,12 @@ def main():
         elif args.algorithm == "neural":
             optimizer = optim.Adam(
                 [
-                    {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-4},
-                    {"params": agent.logic_actor.parameters()},
-                    {"params": agent.blender.parameters(), "lr": 2.5e-4},
+                    {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
+                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
                 ],
-                lr=args.learning_rate,
+                # lr=args.learning_rate,
                 eps = 1e-5
             )
         

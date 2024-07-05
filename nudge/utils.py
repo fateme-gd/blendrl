@@ -12,6 +12,8 @@ from .agents.neural_agent import ActorCritic
 from .agents.blender_agent import BlenderActorCritic
 from nudge.env import NudgeBaseEnv
 from functools import reduce
+from nsfr.utils.torch import softor
+
  
 def to_proportion(dic):
     # Using reduce to get the sum of all values in the dictionary
@@ -133,3 +135,23 @@ def get_most_recent_checkpoint_step(checkpoint_dir):
             if step > highest_step:
                 highest_step = step
     return highest_step
+
+
+def print_program(agent, mode="softor"):
+    """Print a summary of logic programs using continuous weights."""
+    try:
+        nsfr = agent.policy.actor
+    except AttributeError:
+        nsfr = agent.actor
+    if mode == "argmax":
+        C = nsfr.clauses
+        Ws_softmaxed = torch.softmax(nsfr.im.W, 1)
+        for i, W_ in enumerate(Ws_softmaxed):
+            max_i = np.argmax(W_.detach().cpu().numpy())
+            print('C_' + str(i) + ': ',
+                  C[max_i], 'W_' + str(i) + ':', round(W_[max_i].detach().cpu().item(), 3))
+    elif mode == "softor":
+        W_softmaxed = torch.softmax(nsfr.im.W, 1)
+        w = softor(W_softmaxed, dim=0)
+        for i, c in enumerate(nsfr.clauses):
+            print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), nsfr.clauses[i])

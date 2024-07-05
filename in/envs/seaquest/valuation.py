@@ -107,7 +107,7 @@ def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = th.clip((200 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 200, 0, 1)
+    result = th.clip((100 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 100, 0, 1)
     return result
 
 def _not_close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:

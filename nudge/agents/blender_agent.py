@@ -7,7 +7,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F 
-from .logic_agent import LogicPPO, NsfrActorCritic
+from .logic_agent import NsfrActorCritic
 from .neural_agent import NeuralPPO, ActorCritic
 from nudge.torch_utils import softor
 # from nudge.env import NudgeBaseEnv
@@ -88,12 +88,12 @@ class BlenderActor(nn.Module):
     def compute_action_probs_logic(self, logic_state):
         self.w_policy = torch.tensor([0.0, 1.0], device=self.device)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
-        return logic_action_probs
+        return logic_action_probs, torch.tensor([0.0, 1.0], device=self.device).unsqueeze(0).expand(logic_state.size(0), -1)
     
     def compute_action_probs_neural(self, neural_state):
         self.w_policy = torch.tensor([1.0, 0.0], device=self.device)
         neural_action_probs = self.to_neural_action_distribution(neural_state)
-        return neural_action_probs
+        return neural_action_probs, torch.tensor([1.0, 0.0], device=self.device).unsqueeze(0).expand(neural_state.size(0), -1)
 
         
     def to_blender_policy_distribution(self, neural_state, logic_state):
@@ -112,8 +112,6 @@ class BlenderActor(nn.Module):
     
     def to_action_distribution(self, raw_action_probs):
         """Converts raw action probabilities to a distribution."""
-        
-        
         batch_size = raw_action_probs.size(0)
         env_action_names = list(self.env.pred2action.keys())        
         
@@ -216,15 +214,15 @@ class BlenderActorCritic(nn.Module):
         action_logprob = dist.log_prob(action)
         return action.detach(), action_logprob.detach()
 
-    def evaluate(self, neural_state, logic_state, action):
-        action_probs = self.actor(neural_state, logic_state)   
-        dist = Categorical(action_probs)
-        action_logprobs = dist.log_prob(action)
-        dist_entropy = dist.entropy()
-        # state_values = self.critic(neural_state)
-        state_values = self.visual_neural_actor.get_value(neural_state)
+    # def evaluate(self, neural_state, logic_state, action):
+    #     action_probs = self.actor(neural_state, logic_state)   
+    #     dist = Categorical(action_probs)
+    #     action_logprobs = dist.log_prob(action)
+    #     dist_entropy = dist.entropy()
+    #     # state_values = self.critic(neural_state)
+    #     state_values = self.visual_neural_actor.get_value(neural_state)
 
-        return action_logprobs, state_values, dist_entropy
+    #     return action_logprobs, state_values, dist_entropy
 
     def get_prednames(self):
         return self.actor.get_prednames()

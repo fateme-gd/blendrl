@@ -9,7 +9,7 @@ Install `nsfr` and `nudge`.
 
 Training script:
 ```
-python ppo_atari_vectorized.py --track --pretrained --num-steps=512 
+python train_blenderl.py --track --pretrained --num-steps=512 
 ```
 - --track: activate wandb tracking
 - --pretrained: use a pretrained neural agent

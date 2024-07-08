@@ -105,13 +105,13 @@ class Renderer:
                 # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
             else:  # AI plays the game
                 # print("obs_nn: ", obs_nn.shape)
-                action, logprob = self.model.act(obs_nn, th.unsqueeze(obs, 0))  # update the model's internals
+                action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                 # state = (obs_nn, th.unsqueeze(obs, 0))
                 # action = self.model.select_action(state)  # update the model's internals
                 # action, _ = self.model.act(th.unsqueeze(obs, 0))
                 # action = self.predicates[action.item()]
 
-            (new_obs, new_obs_nn), reward, done = self.env.step(action, is_mapped=self.takeover)
+            (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
             new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
             
             self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)

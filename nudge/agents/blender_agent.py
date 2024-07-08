@@ -198,7 +198,7 @@ class BlenderActorCritic(nn.Module):
         raise NotImplementedError
     
     def act(self, neural_state, logic_state, epsilon=0.0):
-        action_probs = self.actor(neural_state, logic_state)
+        action_probs, blending_weights = self.actor(neural_state, logic_state)
 
         # e-greedy
         if self.rng.random() < epsilon:

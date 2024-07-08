@@ -51,6 +51,9 @@ from tqdm import tqdm
 from nudge.env import NudgeBaseEnv
 from nudge.utils import make_deterministic, save_hyperparams
 from nudge.utils import exp_decay, get_action_stats
+from nudge.utils import add_noise
+
+from utils import load_logic_ppo
 
 # Log in to your W&B account
 import wandb
@@ -181,7 +184,13 @@ def main():
 
     agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, device)
     if args.pretrained:
+        # load neural agent weights
         agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))
+        agent.to(device)
+        print("Pretrained neural agent loaded!!!")
+        # load logic agent weights
+        agent = load_logic_ppo(path="models/logic_ppo_agent_Seaquest-v4.pth", agent=agent)
+        # agent.logic_actor.load_state_dict(torch.load("models/logic_ppo_agent_Seaquest-v4.pth")) 
         agent.to(device)
         print("Pretrained neural agent loaded!!!")
     agent._print()

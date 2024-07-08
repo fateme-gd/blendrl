@@ -9,7 +9,6 @@ import re
 
 from .agents.logic_agent import NsfrActorCritic
 from .agents.neural_agent import ActorCritic
-from .agents.blender_agent import BlenderActorCritic
 from nudge.env import NudgeBaseEnv
 from functools import reduce
 from nsfr.utils.torch import softor
@@ -77,6 +76,7 @@ def simulate_prob(extracted_states, num_of_objs, key_picked):
 def load_model(model_dir,
                env_kwargs_override: dict = None,
                device=torch.device('cuda:0')):
+    from .agents.blender_agent import BlenderActorCritic
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
@@ -142,7 +142,10 @@ def print_program(agent, mode="softor"):
     try:
         nsfr = agent.policy.actor
     except AttributeError:
-        nsfr = agent.actor
+        try:
+            nsfr = agent.actor
+        except AttributeError:
+            nsfr = agent
     if mode == "argmax":
         C = nsfr.clauses
         Ws_softmaxed = torch.softmax(nsfr.im.W, 1)
@@ -155,3 +158,4 @@ def print_program(agent, mode="softor"):
         w = softor(W_softmaxed, dim=0)
         for i, c in enumerate(nsfr.clauses):
             print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), nsfr.clauses[i])
+            

@@ -19,7 +19,7 @@ from nsfr.utils.common import load_module
 from nsfr.common import get_nsfr_model
 
 from utils import get_blender, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
-
+from nudge.utils import print_program
 
 class BlenderActor(nn.Module):
     def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, device=None):
@@ -187,9 +187,9 @@ class BlenderActorCritic(nn.Module):
     def _print(self):
         if self.blender_mode == 'logic':
             print("==== Blender ====")
-            self.blender.print_program()
+            print_program(self.blender)
         print("==== Logic Policy ====")
-        self.logic_actor.print_program()
+        print_program(self.logic_actor)
         
     def get_policy_weights(self):
         return self.actor.w_policy

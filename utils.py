@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import torch
 import gymnasium as gym
 from nsfr.common import get_nsfr_model, get_blender_nsfr_model
@@ -152,4 +154,20 @@ def load_cleanrl_agent(pretrained, device):
             agent.load_state_dict(torch.load("cleanrl/out/ppo_Seaquest-v4_1.pth", map_location=torch.device('cpu')))
     else:
         agent.to(device)
+    return agent
+
+
+def load_logic_ppo(agent, path):
+    new_actor_dic = OrderedDict()
+    new_critic_dic = OrderedDict()
+    dic = torch.load(path)
+    for name, value in dic.items():
+        if 'actor.' in name:
+            new_name = name.replace('actor.', '') 
+            new_actor_dic[new_name] = value
+        if 'critic.' in name:
+            new_name = name.replace('critic.', '') 
+            new_critic_dic[new_name] = value
+    agent.logic_actor.load_state_dict(new_actor_dic)
+    agent.logic_critic.load_state_dict(new_critic_dic)
     return agent

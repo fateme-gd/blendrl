@@ -9,6 +9,8 @@ up_aim:1:image
 down_aim:1:image
 up_evade:1:image
 down_evade:1:image
+left_evade:1:image
+right_evade:1:image
 left_to_diver:1:image
 right_to_diver:1:image
 up_to_diver:1:image

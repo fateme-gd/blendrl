@@ -115,6 +115,12 @@ class NSFReasoner(nn.Module):
         target_index = get_index_by_predname(pred_str=predname, atoms=self.atoms)
         value = valuation[:, target_index].item()
         return value
+    
+    def get_fact_valuation(self, predname: str, initial_valuation: bool = True):
+        valuation = self.V_0 if initial_valuation else self.V_T
+        target_index = get_index_by_predname(pred_str=predname, atoms=self.atoms)
+        value = valuation[:, target_index].item()
+        return value
 
     def print_explaining(self, predicts):
         predicts = predicts.detach().cpu().numpy()

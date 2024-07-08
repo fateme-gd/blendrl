@@ -13,6 +13,7 @@ from nudge.env import NudgeBaseEnv
 
 SCREENSHOTS_BASE_PATH = "out/screenshots/"
 PREDICATE_PROBS_COL_WIDTH = 300
+FACT_PROBS_COL_WIDTH = 1000
 CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
 
@@ -88,7 +89,7 @@ class Renderer:
 
         obs, obs_nn = self.env.reset()
         obs_nn = th.tensor(obs_nn, device=self.model.device) 
-        print(obs_nn.shape)
+        # print(obs_nn.shape)
 
         while self.running:
             self.reset = False
@@ -114,7 +115,7 @@ class Renderer:
             (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
             new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
             
-            self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
+            # self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
             # print(self.model.actor.logic_actor.V_T)
             # self.model.actor.logic_actor.print_valuations()
 
@@ -186,10 +187,12 @@ class Renderer:
 
     def _render(self):
         self.window.fill((20, 20, 20))  # clear the entire window
+        self._render_policy_probs()
         self._render_env()
-        if self.render_predicate_probs:
-            self._render_policy_probs()
-            self._render_predicate_probs()
+        self._render_facts()
+        # if self.render_predicate_probs:
+        #     self._render_policy_probs()
+        #     self._render_predicate_probs()
 
         pygame.display.flip()
         pygame.event.pump()
@@ -261,6 +264,36 @@ class Renderer:
             ])
 
             text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
+            self.window.blit(text, text_rect)
+            
+    def _render_facts(self, th=0.5):
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        # nsfr = self.nsfr_reasoner
+        nsfr = self.model.actor.logic_actor
+        
+        fact_vals = {}
+        v_T = nsfr.V_T[0]
+        preds_to_skip = ['.', 'true_predicate', 'test_predicate_global', 'test_predicate_object']
+        for i, atom in enumerate(nsfr.atoms):
+            if v_T[i] > th:
+                if atom.pred.name not in preds_to_skip:
+                    fact_vals[atom] = v_T[i].item()
+                
+        for i, (fact, val) in enumerate(fact_vals.items()):
+            i += 2
+            # Render cell background
+            color = val * CELL_BACKGROUND_HIGHLIGHT + (1 - val) * CELL_BACKGROUND_DEFAULT
+            pygame.draw.rect(self.window, color, [
+                anchor[0] - 2,
+                anchor[1] - 2 + i * 35,
+                FACT_PROBS_COL_WIDTH - 12,
+                28
+            ])
+
+            text = self.font.render(str(f"{val:.3f} - {fact}"), True, "white", None)
             text_rect = text.get_rect()
             text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             self.window.blit(text, text_rect)

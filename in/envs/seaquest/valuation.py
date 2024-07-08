@@ -47,47 +47,54 @@ def facing_right(player: th.Tensor) -> th.Tensor:
 def same_depth_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(abs(player_y - obj_y) < 6)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(abs(player_y - obj_y) < 6) * obj_prob
 
 
 def same_depth_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(abs(player_y - obj_y) < 6)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(abs(player_y - obj_y) < 6) * obj_prob
 
 
 def same_depth_missile(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(abs(player_y - obj_y) < 6)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(abs(player_y - obj_y) < 6) * obj_prob
 
 
 def deeper_than_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is (significantly) 'deeper than' the object."""
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(player_y > obj_y + 4)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_y > obj_y + 4) * obj_prob
 
 
 def deeper_than_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is (significantly) 'deeper than' the object."""
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(player_y > obj_y + 4)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_y > obj_y + 4) * obj_prob
 
 
 def higher_than_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is (significantly) 'higher than' the object."""
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(player_y < obj_y - 4)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_y < obj_y - 4) * obj_prob
 
 
 def higher_than_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is (significantly) 'higher than' the object."""
     player_y = player[..., 2]
     obj_y = obj[..., 2]
-    return bool_to_probs(player_y < obj_y - 4)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_y < obj_y - 4) * obj_prob
 
 
 def close_by_missile(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
@@ -103,12 +110,16 @@ def close_by_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
 
 
 def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    th = 28
     player_x = player[..., 1]
     player_y = player[..., 2]
     obj_x = obj[..., 1]
     obj_y = obj[..., 2]
-    result = th.clip((100 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 100, 0, 1)
-    return result
+    obj_prob = obj[:, 0]
+    dist = (player[:, 1:2] - obj[:, 1:2]).pow(2).sum(1).sqrt()
+    return bool_to_probs(dist < th) * obj_prob
+    # result = th.clip((128 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 128, 0, 1) * obj_prob
+    # return result
 
 def _not_close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_x = player[..., 1]
@@ -130,33 +141,38 @@ def left_of_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is 'left of' the object."""
     player_x = player[..., 1]
     obj_x = obj[..., 1]
-    return bool_to_probs(player_x < obj_x)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_x < obj_x) * obj_prob
 
 
 def left_of_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is 'left of' the object."""
     player_x = player[..., 1]
     obj_x = obj[..., 1]
-    return bool_to_probs(player_x < obj_x)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_x < obj_x) * obj_prob
 
 
 def right_of_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is 'right of' the object."""
     player_x = player[..., 1]
     obj_x = obj[..., 1]
-    return bool_to_probs(player_x > obj_x)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_x > obj_x) * obj_prob
 
 
 def right_of_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is 'right of' the object."""
     player_x = player[..., 1]
     obj_x = obj[..., 1]
-    return bool_to_probs(player_x > obj_x)
+    obj_prob = obj[:, 0]
+    return bool_to_probs(player_x > obj_x) * obj_prob
 
 
 def oxygen_low(oxygen_bar: th.Tensor) -> th.Tensor:
     """True iff oxygen bar is below 16/64."""
-    result = oxygen_bar[..., 1] < 16
+    # result = oxygen_bar[..., 1] < 16
+    result = oxygen_bar[..., 1] < 24
     return bool_to_probs(result)
 
 

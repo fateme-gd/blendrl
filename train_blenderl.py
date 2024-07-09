@@ -144,6 +144,8 @@ class Args:
     """the learning rate of the optimizer (neural)"""
     logic_learning_rate: float = 2.5e-3
     """the learning rate of the optimizer (logic)"""
+    blender_learning_rate: float = 2.5e-4
+    """the learning rate of the optimizer (blender)"""
 
 
 def main():
@@ -154,7 +156,7 @@ def main():
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     model_description = "actor_{}_blender_{}".format(args.actor_mode, args.blender_mode)
-    learning_description = f"lr_{args.learning_rate}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
+    learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_id}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
         wandb.init(
@@ -186,13 +188,11 @@ def main():
     if args.pretrained:
         # load neural agent weights
         agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))
-        agent.to(device)
         print("Pretrained neural agent loaded!!!")
         # load logic agent weights
-        agent = load_logic_ppo(path="models/logic_ppo_agent_Seaquest-v4.pth", agent=agent)
-        # agent.logic_actor.load_state_dict(torch.load("models/logic_ppo_agent_Seaquest-v4.pth")) 
+        # agent = load_logic_ppo(path="models/logic_ppo_agent_Seaquest-v4.pth", agent=agent)
         agent.to(device)
-        print("Pretrained neural agent loaded!!!")
+        # print("Pretrained logic agent loaded!!!")
     agent._print()
     if args.track:
         wandb.watch(agent)
@@ -208,7 +208,7 @@ def main():
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
                     {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.blender_learning_rate},
                 ],
                 # lr=args.learning_rate,
                 eps = 1e-5
@@ -219,7 +219,7 @@ def main():
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
                     {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.blendeer_learning_rate},
                 ],
                 # lr=args.learning_rate,
                 eps = 1e-5
@@ -231,7 +231,7 @@ def main():
                     {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
                     {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.blender_learning_rate},
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
@@ -242,7 +242,7 @@ def main():
                     {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
                     {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.logic_learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.blenderlearning_rate},
                 ],
                 # lr=args.learning_rate,
                 eps = 1e-5

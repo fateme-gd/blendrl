@@ -10,7 +10,7 @@ left_aim(X):-right_of_enemy(P,E),facing_right(P),same_depth_enemy(P,E),visible_e
 right_aim(X):-left_of_enemy(P,E),facing_left(P),same_depth_enemy(P,E),visible_enemy(E).
 up_evade(X):-close_by_enemy(P,E),same_depth_enemy(P,E),visible_enemy(E).
 down_evade(X):-close_by_enemy(P,E),same_depth_enemy(P,E),visible_enemy(E).
+up_evade(X):-close_by_missile(P,M),same_depth_missile(P,M),visible_missile(M).
+down_evade(X):-close_by_missile(P,M),same_depth_missile(P,M),visible_missile(M).
 left_evade(X):-close_by_enemy(P,E),right_of_enemy(P,E),visible_enemy(E).
-left_evade(X):-close_by_enemy(P,E),right_of_enemy(P,E),visible_enemy(E).
-right_evade(X):-close_by_enemy(P,E),left_of_enemy(P,E),visible_enemy(E).
 right_evade(X):-close_by_enemy(P,E),left_of_enemy(P,E),visible_enemy(E).

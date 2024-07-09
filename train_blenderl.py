@@ -219,7 +219,7 @@ def main():
                     # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
                     {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.blendeer_learning_rate},
+                    {"params": agent.blender.parameters(), "lr": args.blender_learning_rate},
                 ],
                 # lr=args.learning_rate,
                 eps = 1e-5

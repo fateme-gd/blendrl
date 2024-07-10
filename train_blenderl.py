@@ -92,7 +92,7 @@ class Args:
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.99
+    gamma: float = 1.0
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
@@ -142,9 +142,9 @@ class Args:
     """jointly train neural actor and logic actor and blender"""
     learning_rate: float = 2.5e-5
     """the learning rate of the optimizer (neural)"""
-    logic_learning_rate: float = 2.5e-3
+    logic_learning_rate: float = 2.5e-2
     """the learning rate of the optimizer (logic)"""
-    blender_learning_rate: float = 2.5e-4
+    blender_learning_rate: float = 2.5e-3
     """the learning rate of the optimizer (blender)"""
 
 
@@ -156,7 +156,7 @@ def main():
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
     model_description = "actor_{}_blender_{}".format(args.actor_mode, args.blender_mode)
-    learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
+    learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_gamma_{args.gamma}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_id}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
         wandb.init(

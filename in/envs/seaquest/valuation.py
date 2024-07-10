@@ -110,7 +110,7 @@ def close_by_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
 
 
 def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
-    th = 28
+    th = 48
     player_x = player[..., 1]
     player_y = player[..., 2]
     obj_x = obj[..., 1]

@@ -107,7 +107,8 @@ class BlenderActor(nn.Module):
             policy_probs = self.blender(neural_state)
             
         logits = torch.logit(policy_probs, eps=0.01)
-        return F.gumbel_softmax(logits, dim=1)
+        return torch.softmax(logits, dim=1)
+        # return F.gumbel_softmax(logits, dim=1)
     
     
     def to_action_distribution(self, raw_action_probs):

@@ -2,6 +2,7 @@ from typing import Sequence
 import torch
 from nudge.env import NudgeBaseEnv
 from ocatari.core import OCAtari
+from hackatari.core import HackAtari
 import numpy as np
 import torch as th
 from ocatari.ram.seaquest import MAX_ESSENTIAL_OBJECTS
@@ -57,20 +58,10 @@ class NudgeEnv(NudgeBaseEnv):
 
     def __init__(self, mode: str, render_mode="rgb_array", render_oc_overlay=False, seed=None):
         super().__init__(mode)
-        #self.raw_env = gymnasium.make("SeaquestNoFrameskip-v4")
-        # self.raw_env = gymnasium.make("Seaquest-v4")
-        # self.raw_env = load_cleanrl_envs("Seaquest-v4")
-        # self.raw_env = load_cleanrl_envs("SeaquestDeterministic-v4")
-        # self.raw_env = env = make_atari_env('SeaquestNoFrameskip-v4', n_envs=1, seed=seed)
-        # self.raw_env = VecFrameStack(env, n_stack=4)
-
-        # self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
-        # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
-        # self.env = OCAtari(env_name="Seaquest", mode="ram",
-        # self.env = OCAtari(env_name="Seaquest-v4", mode="ram",
+        # self.env = OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
         #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay)
-        self.env = OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
-                           render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        self.env = HackAtari(env_name="ALE/Seaquest-v5", mode="ram", modifs=[("disable_enemies")],
+                            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
         self.env._env = make_env(self.env._env)
         self.n_actions = 6

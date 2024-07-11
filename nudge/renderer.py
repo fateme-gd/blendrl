@@ -24,6 +24,7 @@ class Renderer:
 
     def __init__(self,
                  agent_path: str = None,
+                 env_name: str = "seaquest",
                  device: str = "cpu",
                  fps: int = None,
                  deterministic=True,
@@ -36,7 +37,7 @@ class Renderer:
 
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
-        self.env = NudgeBaseEnv.from_name("seaquest", mode='deictic', seed=0, **env_kwargs)
+        self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=10, **env_kwargs)
         self.env = self.model.env
         self.env.reset()
         
@@ -268,7 +269,7 @@ class Renderer:
             text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             self.window.blit(text, text_rect)
             
-    def _render_facts(self, th=0.5):
+    def _render_facts(self, th=0.1):
         anchor = (self.env_render_shape[0] + 10, 25)
 
         # nsfr = self.nsfr_reasoner

@@ -42,6 +42,7 @@ class NSFReasoner(nn.Module):
         self.V_0 = self.fc(zs, self.atoms, self.bk)
         # perform T-step forward-chaining reasoning
         self.V_T = self.im(self.V_0)
+        # self.print_valuations()
         # only return probs of actions
         actions = self.get_predictions(self.V_T, prednames=self.prednames)
         return actions
@@ -88,11 +89,11 @@ class NSFReasoner(nn.Module):
                   C[max_i], 'W_' + str(i) + ':', round(W_[max_i].detach().cpu().item(), 3))
 
     def print_valuations(self, predicate: str = None, min_value: float = 0,
-                         initial_valuation: bool = True):
-        # print('===== VALUATIONS =====')
+                         initial_valuation: bool = False):
+        print('===== VALUATIONS =====')
         valuation = self.V_0 if initial_valuation else self.V_T
         for b, batch in enumerate(valuation):
-            # print(f"== BATCH {b} ==")
+            print(f"== BATCH {b} ==")
             batch = batch.detach().cpu().numpy()
             idxs = np.argsort(-batch)  # Sort by valuation value
             for i in idxs:

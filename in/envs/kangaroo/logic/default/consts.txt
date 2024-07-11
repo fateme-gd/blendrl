@@ -1,0 +1,5 @@
+image:img
+
+oplayer:obj1
+
+oladder:obj2,obj3,obj4,obj5

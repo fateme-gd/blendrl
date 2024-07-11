@@ -2,9 +2,10 @@ from typing import Sequence
 import torch
 from nudge.env import NudgeBaseEnv
 from ocatari.core import OCAtari
+from hackatari.core import HackAtari
 import numpy as np
 import torch as th
-from ocatari.ram.seaquest import MAX_ESSENTIAL_OBJECTS
+from ocatari.ram.kangaroo import MAX_ESSENTIAL_OBJECTS
 import gymnasium
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_atari_env
@@ -22,13 +23,8 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 )
 
 def make_env(env):
-    # def thunk():
-        # if capture_video and idx == 0:
-            # env = gym.make(env_id, render_mode="rgb_array")
-            # env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        # else:
-            # env = gym.make(env_id)
     env = gym.wrappers.RecordEpisodeStatistics(env)
+    env = gym.wrappers.AutoResetWrapper(env)
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
     env = EpisodicLifeEnv(env)
@@ -38,13 +34,11 @@ def make_env(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     env = gym.wrappers.GrayScaleObservation(env)
     env = gym.wrappers.FrameStack(env, 4)
-    env = gym.wrappers.AutoResetWrapper(env)
     return env
 
 
-
 class NudgeEnv(NudgeBaseEnv):
-    name = "seaquest"
+    name = "kangaroo"
     pred2action = {
         'noop': 0,
         'fire': 1,
@@ -67,15 +61,15 @@ class NudgeEnv(NudgeBaseEnv):
         # self.env = OCAtari(env_name="SeaquestNoFrameskip-v4", mode="ram",
         # self.env = OCAtari(env_name="Seaquest-ramDeterministic-v4", mode="ram",
         # self.env = OCAtari(env_name="Seaquest", mode="ram",
-        # self.env = OCAtari(env_name="Seaquest-v4", mode="ram",
+        # self.env = OCAtari(env_name="Kangaroo-v4", mode="ram", obs_mode="ori",
         #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay)
-        self.env = OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
-                           render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[("disable_monkeys", "disable_coconut")],\
+            render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
         self.env._env = make_env(self.env._env)
         self.n_actions = 6
         self.n_raw_actions = 18
-        self.n_objects = 43
+        self.n_objects = 49
         self.n_features = 4  # visible, x-pos, y-pos, right-facing
         self.seed = seed
 
@@ -131,6 +125,20 @@ class NudgeEnv(NudgeBaseEnv):
         return (logic_state, neural_state), reward, done, truncations, infos
 
     def extract_logic_state(self, input_state):
+        """ in ocatari/ram/kangaroo.py :
+        MAX_ESSENTIAL_OBJECTS = {
+            'Player': 1,
+            'Child': 1,
+            'Fruit': 3,
+            'Bell': 1,
+            'Platform': 20,
+            'Ladder': 6,
+            'Monkey': 4,
+            'FallingCoconut': 1,
+            'ThrownCoconut': 3,
+            'Life': 8,
+            'Time': 1,}       
+        """
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
 
         obj_count = {k: 0 for k in MAX_ESSENTIAL_OBJECTS.keys()}
@@ -139,13 +147,12 @@ class NudgeEnv(NudgeBaseEnv):
             if obj.category not in self.relevant_objects:
                 continue
             idx = self.obj_offsets[obj.category] + obj_count[obj.category]
-            if obj.category == "OxygenBar":
+            if obj.category == "Time":
                 state[idx] = th.Tensor([1, obj.value, 0, 0])
             else:
                 orientation = obj.orientation.value if obj.orientation is not None else 0
                 state[idx] = th.tensor([1, *obj.center, orientation])
             obj_count[obj.category] += 1
-
         return state
 
     def extract_neural_state(self, raw_input_state):

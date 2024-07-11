@@ -17,11 +17,30 @@ from nsfr.utils.common import bool_to_probs
             'Time': 1,}       
 """
 
-def same_level_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
-    player_y = player[..., 2]
-    obj_y = obj[..., 2]
-    obj_prob = obj[:, 0]
-    return bool_to_probs(abs(player_y - obj_y) < 50) * obj_prob
+def climbing(player: th.Tensor) -> th.Tensor:
+    status = player[..., 3]
+    return bool_to_probs(status == 12)
+
+
+def not_climbing(player: th.Tensor) -> th.Tensor:
+    status = player[..., 3]
+    return bool_to_probs(status != 12)
+    
+def _on_platform(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
+    """True iff obj1 is 'on' obj2."""
+    obj1_y = obj1[..., 2]
+    obj2_y = obj2[..., 2]
+    obj1_prob = obj1[:, 0]
+    obj2_prob = obj2[:, 0]
+    return bool_to_probs(5 < obj1_y - obj2_y < 28) * obj1_prob * obj2_prob
+
+def on_pl_player(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _on_platform(player, obj)
+
+def on_pl_ladder(ladder: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _on_platform(ladder, obj)
+
+
 
 def on_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_x = player[..., 1]
@@ -29,16 +48,17 @@ def on_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_y = obj[..., 2]
     obj_prob = obj[:, 0]
-    x_prob =  bool_to_probs(abs(player_x - obj_x) < 8)
-    y_prob = bool_to_probs(abs(obj_y - player_y < 0))
-    return  x_prob * y_prob * obj_prob * same_level_ladder(player, obj)
+    x_prob =  bool_to_probs(abs(player_x - obj_x) < 3)
+    return x_prob
+    # y_prob = bool_to_probs(obj_y > player_y - 8)
+    # return  x_prob * y_prob * obj_prob * same_level_ladder(player, obj)
 
 def left_of_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     """True iff the player is 'left of' the object."""
     player_x = player[..., 1]
     obj_x = obj[..., 1]
     obj_prob = obj[:, 0]
-    return bool_to_probs(player_x < obj_x) * obj_prob
+    return bool_to_probs(player_x < obj_x) * obj_prob  * same_level_ladder(player, obj)
 
 
 def right_of_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
@@ -46,8 +66,15 @@ def right_of_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_x = player[..., 1]
     obj_x = obj[..., 1]
     obj_prob = obj[:, 0]
-    return bool_to_probs(player_x > obj_x) * obj_prob
+    return bool_to_probs(player_x > obj_x) * obj_prob  * same_level_ladder(player, obj)
 
+
+
+def same_level_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    player_y = player[..., 2]
+    obj_y = obj[..., 2]
+    obj_prob = obj[:, 0]
+    return bool_to_probs(abs(player_y - obj_y) < 30) * obj_prob
 
 def same_depth_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]

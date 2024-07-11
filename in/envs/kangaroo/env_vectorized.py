@@ -55,7 +55,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         self.n_envs = n_envs
         # self.envs = [OCAtari(env_name="Kangaroo-v4", mode="ram", obs_mode="ori",
         #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
-        self.envs = [HackAtari(env_name="Kangaroo-v4", mode="ram", obs_mode="ori", modifs=[("disable_monkeys", "disable_coconut")],
+        self.envs = [HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[("disable_monkeys", "disable_coconut")],
                             render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
         # apply wrapper to _env in OCAtari
         for i in range(n_envs):

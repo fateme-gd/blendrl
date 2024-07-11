@@ -1,0 +1,4 @@
+on_ladder:2:oplayer,oladder
+same_level_ladder:2:oplayer,oladder
+right_of_ladder:2:oplayer,oladder
+left_of_ladder:2:oplayer,oladder

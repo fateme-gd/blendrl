@@ -41,12 +41,32 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "vectorized ppo_atari on deirl",
+            "name": "train blenderl",
             "type": "debugpy",
             "request": "launch",
-            "program": "ppo_atari_vectorized.py",
+            "program": "train_blenderl.py",
             "pythonPath": "python",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "train nudge",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_nudge.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "train kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo"
+            ],
         },
     ]
 }

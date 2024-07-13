@@ -4,5 +4,3 @@ left_of_ladder:2:oplayer,oladder
 false_predicate:1:oplayer
 on_pl_ladder:2:oladder,oplatform
 on_pl_player:2:oplayer,oplatform
-climbing:1:oplayer
-not_climbing:1:oplayer

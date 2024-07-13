@@ -32,7 +32,7 @@ def _on_platform(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
     obj2_y = obj2[..., 2]
     obj1_prob = obj1[:, 0]
     obj2_prob = obj2[:, 0]
-    return bool_to_probs(5 < obj1_y - obj2_y < 28) * obj1_prob * obj2_prob
+    return bool_to_probs(5 < obj1_y - obj2_y < 50) * obj1_prob * obj2_prob
 
 def on_pl_player(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _on_platform(player, obj)

@@ -40,6 +40,11 @@ def on_pl_player(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
 def on_pl_ladder(ladder: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _on_platform(ladder, obj)
 
+def on_pl_fruit(fruit: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _on_platform(fruit, obj)
+
+def on_pl_bell(bell: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _on_platform(bell, obj)
 
 
 def on_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
@@ -121,12 +126,40 @@ def higher_than_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     obj_prob = obj[:, 0]
     return bool_to_probs(player_y < obj_y - 4) * obj_prob
 
+def same_level_fruit(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _same_level(player, obj)
 
-def close_by_missile(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+def same_level_bell(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _same_level(player, obj)
+
+def _same_level(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
+    obj1_y = obj1[..., 2] 
+    obj2_y = obj2[..., 2]
+    
+    
+    is_3rd_level = (28 < obj1_y < 76) and (28 < obj2_y < 76)
+    is_2nd_level = (76 < obj1_y < 124) and (76 < obj2_y < 124)
+    is_1st_level = (124 < obj1_y < 172) and (124 < obj2_y < 172)
+    
+    is_same_level = is_3rd_level or is_2nd_level or is_1st_level
+    return bool_to_probs(is_same_level)
+
+def close_by_fruit(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _close_by(player, obj) * _same_level(player, obj)
+
+def close_by_bell(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _close_by(player, obj) * _same_level(player, obj)
+
+def close_by_throwncoconut(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _close_by(player, obj)
 
+def close_by_fallingcoconut(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _close_by(player, obj)
 
-def close_by_enemy(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+def close_by_monkey(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    return _close_by(player, obj)
+
+def close_by_coconut(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _close_by(player, obj)
 
 
@@ -135,13 +168,16 @@ def close_by_diver(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
 
 
 def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
-    th = 48
-    player_x = player[..., 1]
-    player_y = player[..., 2]
-    obj_x = obj[..., 1]
-    obj_y = obj[..., 2]
+    th = 32
+    player_x = player[:, 1]
+    player_y = player[:, 2]
+    obj_x = obj[:, 1]
+    obj_y = obj[:, 2]
     obj_prob = obj[:, 0]
-    dist = (player[:, 1:2] - obj[:, 1:2]).pow(2).sum(1).sqrt()
+    x_dist = (player_x - obj_x).pow(2)
+    y_dist = (player_y - obj_y).pow(2)
+    dist = (x_dist + y_dist).sqrt()
+    # dist = (player[:, 1:2] - obj[:, 1:2]).pow(2).sum(1).sqrt()
     return bool_to_probs(dist < th) * obj_prob
     # result = th.clip((128 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 128, 0, 1) * obj_prob
     # return result

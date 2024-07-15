@@ -51,7 +51,7 @@ class NudgeEnv(NudgeBaseEnv):
 
     def __init__(self, mode: str, render_mode="rgb_array", render_oc_overlay=False, seed=None):
         super().__init__(mode)
-        self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[("random_init"), ("disable_monkeys"), ("disable_coconut"), ("change_level0")],\
+        self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[("disable_coconut"), ("change_level0")],\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
         self.env._env = make_env(self.env._env)

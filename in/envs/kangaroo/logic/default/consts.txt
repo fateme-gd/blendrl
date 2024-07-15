@@ -11,7 +11,7 @@ oplatform:obj7,obj8,obj9,obj10,obj11,obj12,obj13,obj14,obj15,obj16,obj17,obj18,o
 
 oladder:obj27,obj28,obj29,obj30,obj31,obj32
 
-omonkeyo:obj33,obj34,obj35,obj36
+omonkey:obj33,obj34,obj35,obj36
 
 ofallingcoconut:obj37
 

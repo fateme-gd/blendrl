@@ -241,8 +241,7 @@ class BlenderActorCritic(nn.Module):
         # batch_size * 1
         neural_value = self.get_neural_value(neural_state)
         logic_value = self.get_logic_value(logic_state)
-        # blended_value = (blending_weights[:,0] * neural_value.squeeze(1) + blending_weights[:,1] * logic_value.squeeze(1)).unsqueeze(1)
-        blended_value = neural_value
+        blended_value = (blending_weights[:,0] * neural_value.squeeze(1) + blending_weights[:,1] * logic_value.squeeze(1)).unsqueeze(1)
 
         return action, logprob, dist.entropy(), blended_value
     

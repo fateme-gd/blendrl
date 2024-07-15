@@ -160,7 +160,7 @@ def main():
     run_name = f"{args.env_name}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
         wandb.init(
-            project=args.wandb_project_name,
+            project=args.wandb_project_name + "_" + args.env_name,
             entity=args.wandb_entity,
             sync_tensorboard=True,
             config=vars(args),
@@ -266,7 +266,7 @@ def main():
 
     # TRY NOT TO MODIFY: start the game
     global_step = 0
-    save_step_bar = args.save_steps
+    save_step_bar = 0 # args.save_steps
     start_time = time.time()
     next_logic_obs, next_obs = envs.reset()#(seed=seed)
     # 1 env 
@@ -347,10 +347,10 @@ def main():
                 save_step_bar += args.save_steps
                 
                 # save hyper params
-                # save_hyperparams(signature=signature(main),
-                #      local_scope=locals(),
-                #      save_path=experiment_dir / "config.yaml",
-                #      print_summary=True)
+                save_hyperparams(signature=signature(main),
+                     local_scope=locals(),
+                     save_path=experiment_dir / "config.yaml",
+                     print_summary=True)
 
         # bootstrap value if not done
         with torch.no_grad():

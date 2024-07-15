@@ -32,7 +32,8 @@ def _on_platform(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
     obj2_y = obj2[..., 2]
     obj1_prob = obj1[:, 0]
     obj2_prob = obj2[:, 0]
-    return bool_to_probs(12 < obj2_y - obj1_y < 60) * obj1_prob * obj2_prob
+    result = th.logical_and(12 < obj2_y - obj1_y, obj2_y - obj1_y < 60) 
+    return bool_to_probs(result) * obj1_prob * obj2_prob
 
 def on_pl_player(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _on_platform(player, obj)
@@ -136,12 +137,11 @@ def _same_level(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
     obj1_y = obj1[..., 2] 
     obj2_y = obj2[..., 2]
     
+    is_3rd_level = th.logical_and(th.logical_and(28 < obj1_y,  obj1_y < 76), th.logical_and(28 < obj2_y, obj2_y < 76))
+    is_2nd_level = th.logical_and(th.logical_and(76 < obj1_y, obj1_y < 124), th.logical_and(76 < obj2_y, obj2_y < 124))
+    is_1st_level = th.logical_and(th.logical_and(124 < obj1_y, obj1_y < 172), th.logical_and(124 < obj2_y, obj2_y < 172))
     
-    is_3rd_level = (28 < obj1_y < 76) and (28 < obj2_y < 76)
-    is_2nd_level = (76 < obj1_y < 124) and (76 < obj2_y < 124)
-    is_1st_level = (124 < obj1_y < 172) and (124 < obj2_y < 172)
-    
-    is_same_level = is_3rd_level or is_2nd_level or is_1st_level
+    is_same_level = th.logical_or(is_3rd_level, th.logical_or(is_2nd_level, is_1st_level))
     return bool_to_probs(is_same_level)
 
 def close_by_fruit(player: th.Tensor, obj: th.Tensor) -> th.Tensor:

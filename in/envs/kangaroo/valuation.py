@@ -4,10 +4,10 @@ from nsfr.utils.common import bool_to_probs
 
 """ in ocatari/ram/kangaroo.py :
         MAX_ESSENTIAL_OBJECTS = {
-            'Player': 1,
-            'Child': 1,
-            'Fruit': 3,
-            'Bell': 1,
+            'Player': 1, (0)
+            'Child': 1, (1)
+            'Fruit': 3, (2)
+            'Bell': 1, (5)
             'Platform': 20,
             'Ladder': 6,
             'Monkey': 4,
@@ -25,6 +25,24 @@ from nsfr.utils.common import bool_to_probs
 # def not_climbing(player: th.Tensor) -> th.Tensor:
 #     status = player[..., 3]
 #     return bool_to_probs(status != 12)
+
+def nothing_around(objs: th.Tensor) -> th.Tensor:
+    # target objects: fruit, bell, monkey, fallingcoconut, throwncoconut
+    fruits = objs[:, 2:5]
+    bell = objs[:, 5].unsqueeze(1)
+    monkey = objs[:, 32:36]
+    falling_coconut = objs[:, 36].unsqueeze(1)
+    thrown_coconut = objs[:, 37:40]
+    target_objs = th.cat([fruits, bell, monkey, falling_coconut, thrown_coconut], dim=1)
+    players = objs[:, 0].unsqueeze(1).expand(-1, target_objs.size(1), -1)
+    
+    # batch_size * num_target_objs
+    probs = th.stack([_close_by(players[:, i, :], target_objs[:, i, :]) for i in range(target_objs.size(1))], dim=1)
+    
+    max_closeby_prob, _ = probs.max(dim=1)
+    result = (1.0 - max_closeby_prob).float()
+    return result
+
     
 def _on_platform(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
     """True iff obj1 is 'on' obj2."""

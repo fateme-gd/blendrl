@@ -105,7 +105,7 @@ def load_model(model_dir,
     elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
     else:
-        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], device=device).to(device)
+        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], blend_function=config["blend_function"], device=device).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:

@@ -311,6 +311,7 @@ def main():
 
             # TRY NOT TO MODIFY: execute the game and log data.
             (next_logic_obs, next_obs), reward, terminations, truncations, infos  = envs.step(action.cpu().numpy())
+            next_logic_obs = next_logic_obs.float()
             terminations = np.array(terminations)
             truncations = np.array(truncations)
             next_done = np.logical_or(terminations, truncations)

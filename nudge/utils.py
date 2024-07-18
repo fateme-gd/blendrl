@@ -108,8 +108,8 @@ def load_model(model_dir,
         model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], device=device).to(device)
 
     # Load the model weights
-    # with open(checkpoint_path, "rb") as f:
-        # model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
+    with open(checkpoint_path, "rb") as f:
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
     # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
     # print(model.logic_actor.im.W)
 

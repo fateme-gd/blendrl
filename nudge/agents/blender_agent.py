@@ -22,7 +22,7 @@ from utils import get_blender, extract_policy_probs, load_pretrained_stable_base
 from nudge.utils import print_program
 
 class BlenderActor(nn.Module):
-    def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, device=None):
+    def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, blend_function, device=None):
         super(BlenderActor, self).__init__()
         self.env = env
         self.neural_actor = neural_actor
@@ -30,6 +30,7 @@ class BlenderActor(nn.Module):
         self.blender = blender
         self.actor_mode = actor_mode
         self.blender_mode = blender_mode
+        self.blend_function = blend_function
         self.device = device
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
@@ -101,14 +102,18 @@ class BlenderActor(nn.Module):
         # probs = extract_policy_probs(self.blender, V_T, self.device)
         # to logit
         assert self.blender_mode in ['logic', 'neural'], "Invalid blender mode {}".format(self.blender_mode)
+        assert self.blend_function in ['softmax', 'gumbel_softmax'], "Invalid blend function {}".format(self.blend_function)
+        
         if self.blender_mode == 'logic':
             policy_probs = self.blender(logic_state)
         else:
             policy_probs = self.blender(neural_state)
             
         logits = torch.logit(policy_probs, eps=0.01)
-        return torch.softmax(logits, dim=1)
-        # return F.gumbel_softmax(logits, dim=1)
+        if self.blend_function == 'softmax':
+            return torch.softmax(logits, dim=1)
+        else:
+            return F.gumbel_softmax(logits, dim=1)
     
     
     def to_action_distribution(self, raw_action_probs):
@@ -160,12 +165,13 @@ class BlenderActor(nn.Module):
         
 
 class BlenderActorCritic(nn.Module):
-    def __init__(self, env, rules, actor_mode, blender_mode, device, rng=None):
+    def __init__(self, env, rules, actor_mode, blender_mode, blend_function, device, rng=None):
         super(BlenderActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
         self.actor_mode = actor_mode
         self.blender_mode = blender_mode
+        self.blend_function = blend_function
         self.env = env
         self.rules = rules
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
@@ -174,7 +180,7 @@ class BlenderActorCritic(nn.Module):
         self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.logic_critic = module.MLP(device=device, out_size=1, logic=True)
         self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
-        self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, device=device)
+        self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, blend_function, device=device)
         
         # the number of actual actions on the environment
         self.num_actions = len(self.env.pred2action.keys())
@@ -233,6 +239,7 @@ class BlenderActorCritic(nn.Module):
         # n_envs * n_actions
         action_probs, blending_weights = self.actor(neural_state, logic_state)
         dist = Categorical(action_probs)
+        blend_dist = Categorical(blending_weights)
         if action is None:
             action = dist.sample()
         logprob = dist.log_prob(action)
@@ -243,7 +250,7 @@ class BlenderActorCritic(nn.Module):
         logic_value = self.get_logic_value(logic_state)
         blended_value = (blending_weights[:,0] * neural_value.squeeze(1) + blending_weights[:,1] * logic_value.squeeze(1)).unsqueeze(1)
 
-        return action, logprob, dist.entropy(), blended_value
+        return action, logprob, dist.entropy(), blend_dist.entropy(), blended_value
     
     def get_neural_value(self, neural_state):
         value = self.visual_neural_actor.get_value(neural_state)
@@ -254,7 +261,7 @@ class BlenderActorCritic(nn.Module):
         return value
     
     def get_value(self, neural_state, logic_state):
-        _, _, _, value = self.get_action_and_value(neural_state, logic_state)
+        _, _, _, _, value = self.get_action_and_value(neural_state, logic_state)
         return value
     
     def save(self, checkpoint_path, directory: Path, step_list, reward_list, weight_list):

@@ -60,7 +60,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(6)
+torch.set_num_threads(12)
 
 @dataclass
 class Args:
@@ -86,7 +86,7 @@ class Args:
     """the id of the environment"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
-    num_envs: int = 10
+    num_envs: int = 12
     """the number of parallel game environments"""
     num_steps: int = 512 #128
     """the number of steps to run in each environment per policy rollout"""
@@ -130,6 +130,8 @@ class Args:
     """the algorithm used in the agent"""
     blender_mode: str = "logic"
     """the mode for the blend"""
+    blend_function: str = "softmax"
+    """the function to blend the neural and logic agents: softmax or gumbel_softmax"""
     actor_mode: str = "hybrid"
     """the mode for the agent"""
     rules: str = "default"
@@ -146,6 +148,8 @@ class Args:
     """the learning rate of the optimizer (logic)"""
     blender_learning_rate: float = 2.5e-3
     """the learning rate of the optimizer (blender)"""
+    blend_ent_coef: float = 0.1
+    """coefficient of the blend entropy"""
 
 
 def main():
@@ -155,8 +159,8 @@ def main():
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    model_description = "actor_{}_blender_{}".format(args.actor_mode, args.blender_mode)
-    learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_gamma_{args.gamma}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
+    model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
+    learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_gamma_{args.gamma}_bentcoef_{args.blend_ent_coef}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_name}_{model_description}_{learning_description}_{args.seed}"
     if args.track:
         wandb.init(
@@ -184,7 +188,7 @@ def main():
 
     envs = VectorizedNudgeBaseEnv.from_name(args.env_name, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
 
-    agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, device)
+    agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, args.blend_function, device)
     if args.pretrained:
         # load neural agent weights
         agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))
@@ -300,7 +304,7 @@ def main():
             with torch.no_grad():
                 # next_obs: (1, 4, 84, 84)
                 # next_logic_obs: (1, 84, 51, 4)
-                action, logprob, _, value = agent.get_action_and_value(next_obs, next_logic_obs)
+                action, logprob, _, _, value = agent.get_action_and_value(next_obs, next_logic_obs)
                 values[step] = value.flatten()
             actions[step] = action
             logprobs[step] = logprob
@@ -386,7 +390,7 @@ def main():
                 end = start + args.minibatch_size
                 mb_inds = b_inds[start:end]
                 # print(b_obs[mb_inds])
-                _, newlogprob, entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_logic_obs[mb_inds], b_actions.long()[mb_inds])
+                _, newlogprob, entropy, blend_entropy, newvalue = agent.get_action_and_value(b_obs[mb_inds], b_logic_obs[mb_inds], b_actions.long()[mb_inds])
                 logratio = newlogprob - b_logprobs[mb_inds]
                 ratio = logratio.exp()
 
@@ -421,7 +425,9 @@ def main():
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
                 entropy_loss = entropy.mean()
-                loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+                blend_entropy_loss = blend_entropy.mean()
+                joint_entropy_loss = - args.ent_coef * entropy_loss - args.blend_ent_coef * blend_entropy_loss
+                loss = pg_loss + joint_entropy_loss + v_loss * args.vf_coef
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -440,6 +446,7 @@ def main():
         writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
         writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
         writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+        writer.add_scalar("losses/blend_entropy", blend_entropy_loss.item(), global_step)
         writer.add_scalar("losses/old_approx_kl", old_approx_kl.item(), global_step)
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)

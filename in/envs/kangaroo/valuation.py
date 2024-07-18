@@ -33,7 +33,8 @@ def nothing_around(objs: th.Tensor) -> th.Tensor:
     monkey = objs[:, 32:36]
     falling_coconut = objs[:, 36].unsqueeze(1)
     thrown_coconut = objs[:, 37:40]
-    target_objs = th.cat([fruits, bell, monkey, falling_coconut, thrown_coconut], dim=1)
+    # target_objs = th.cat([fruits, bell, monkey, falling_coconut, thrown_coconut], dim=1)
+    target_objs = th.cat([monkey, falling_coconut, thrown_coconut], dim=1)
     players = objs[:, 0].unsqueeze(1).expand(-1, target_objs.size(1), -1)
     
     # batch_size * num_target_objs

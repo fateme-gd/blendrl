@@ -60,7 +60,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(12)
+torch.set_num_threads(20)
 
 @dataclass
 class Args:

@@ -1,6 +1,3 @@
-neural_agent(X):-close_by_fruit(P,F).
 neural_agent(X):-close_by_monkey(P,M).
 neural_agent(X):-close_by_throwncoconut(P,TC).
-neural_agent(X):-close_by_fallingcoconut(P,FC).
-neural_agent(X):-close_by_bell(P,B).
 logic_agent(X):-nothing_around(X).

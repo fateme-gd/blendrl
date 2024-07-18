@@ -133,7 +133,7 @@ class Args:
     """the mode for the agent"""
     rules: str = "default"
     """the ruleset used in the agent"""
-    save_steps: int = 1000000
+    save_steps: int = 500000
     """the number of steps to save models"""
     pretrained: bool = False
     """to use pretrained neural agent"""

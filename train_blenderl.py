@@ -144,9 +144,9 @@ class Args:
     """jointly train neural actor and logic actor and blender"""
     learning_rate: float = 2.5e-5
     """the learning rate of the optimizer (neural)"""
-    logic_learning_rate: float = 2.5e-2
+    logic_learning_rate: float = 2.5e-4
     """the learning rate of the optimizer (logic)"""
-    blender_learning_rate: float = 2.5e-3
+    blender_learning_rate: float = 2.5e-4
     """the learning rate of the optimizer (blender)"""
     blend_ent_coef: float = 0.1
     """coefficient of the blend entropy"""

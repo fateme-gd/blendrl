@@ -1,7 +1,7 @@
 from nudge.renderer import Renderer
 
 if __name__ == "__main__":
-    renderer = Renderer(agent_path="out/runs/_kangaroo",
+    renderer = Renderer(agent_path="out/runs/kangaroo_new",
                         env_name="kangaroo",
                         fps=30,
                         deterministic=False,

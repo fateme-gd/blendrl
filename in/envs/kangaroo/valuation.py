@@ -78,7 +78,7 @@ def on_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     player_y = player[..., 2]
     obj_y = obj[..., 2]
     obj_prob = obj[:, 0]
-    x_prob =  bool_to_probs(abs(player_x - obj_x) < 3)
+    x_prob =  bool_to_probs(abs(player_x - obj_x) < 4)
     return x_prob
     # y_prob = bool_to_probs(obj_y > player_y - 8)
     # return  x_prob * y_prob * obj_prob * same_level_ladder(player, obj)
@@ -156,6 +156,17 @@ def same_level_fruit(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
 
 def same_level_bell(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _same_level(player, obj)
+
+def same_level_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
+    obj1_y = player[..., 2] + 10
+    obj2_y = obj[..., 2]
+    
+    is_3rd_level = th.logical_and(th.logical_and(28 < obj1_y,  obj1_y < 76), th.logical_and(28 < obj2_y, obj2_y < 76))
+    is_2nd_level = th.logical_and(th.logical_and(76 < obj1_y, obj1_y < 124), th.logical_and(76 < obj2_y, obj2_y < 124))
+    is_1st_level = th.logical_and(th.logical_and(124 < obj1_y, obj1_y < 172), th.logical_and(124 < obj2_y, obj2_y < 172))
+    
+    is_same_level = th.logical_or(is_3rd_level, th.logical_or(is_2nd_level, is_1st_level))
+    return bool_to_probs(is_same_level)
 
 def _same_level(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
     obj1_y = obj1[..., 2] 

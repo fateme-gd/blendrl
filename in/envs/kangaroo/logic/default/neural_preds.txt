@@ -10,3 +10,4 @@ close_by_monkey:2:oplayer,omonkey
 close_by_throwncoconut:2:oplayer,othrowncoconut
 close_by_fallingcoconut:2:oplayer,ofallingcoconut
 nothing_around:1:image
+same_level_ladder:2:oplayer,oladder

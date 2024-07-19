@@ -23,7 +23,7 @@ from nsfr.utils.common import bool_to_probs
 
 
 # def not_climbing(player: th.Tensor) -> th.Tensor:
-#     status = player[..., 3]
+#     status = player[..., 3
 #     return bool_to_probs(status != 12)
 
 def nothing_around(objs: th.Tensor) -> th.Tensor:
@@ -43,6 +43,11 @@ def nothing_around(objs: th.Tensor) -> th.Tensor:
     max_closeby_prob, _ = probs.max(dim=1)
     result = (1.0 - max_closeby_prob).float()
     return result
+
+def _in_field(obj: th.Tensor) -> th.Tensor:
+    x = obj[..., 1]
+    prob = obj[:, 0]
+    return bool_to_probs(th.logical_and(16 <= x, x <= 16 + 128)) * prob
 
     
 def _on_platform(obj1: th.Tensor, obj2: th.Tensor) -> th.Tensor:
@@ -197,7 +202,7 @@ def _close_by(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     y_dist = (player_y - obj_y).pow(2)
     dist = (x_dist + y_dist).sqrt()
     # dist = (player[:, 1:2] - obj[:, 1:2]).pow(2).sum(1).sqrt()
-    return bool_to_probs(dist < th) * obj_prob
+    return bool_to_probs(dist < th) * obj_prob * _in_field(obj)
     # result = th.clip((128 - abs(player_x - obj_x) - abs(player_y - obj_y)) / 128, 0, 1) * obj_prob
     # return result
 

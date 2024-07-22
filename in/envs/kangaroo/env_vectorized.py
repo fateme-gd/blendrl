@@ -81,6 +81,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         logic_states = []
         neural_states = []
         seed_i = self.seed
+        print("Env is being reset...")
         for env in self.envs:
             obs, _ = env.reset(seed=seed_i)
             # lazy frame to tensor
@@ -91,6 +92,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             logic_states.append(logic_state)
             neural_states.append(neural_state)
             seed_i += 1
+        print("Env reset is done.")
         return torch.stack(logic_states), torch.stack(neural_states)
 
     def step(self, actions, is_mapped: bool = False):
@@ -160,4 +162,5 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         return raw_input_state
 
     def close(self):
-        self.env.close()
+        for env in self.envs:
+            env.close()

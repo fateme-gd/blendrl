@@ -60,7 +60,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(20)
+torch.set_num_threads(40)
 
 @dataclass
 class Args:
@@ -84,15 +84,15 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Seaquest-v4"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 20000000
     """total timesteps of the experiments"""
-    num_envs: int = 12
+    num_envs: int = 20
     """the number of parallel game environments"""
-    num_steps: int = 512 #128
+    num_steps: int = 128
     """the number of steps to run in each environment per policy rollout"""
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 1.0
+    gamma: float = 0.99
     """the discount factor gamma"""
     gae_lambda: float = 0.95
     """the lambda for the general advantage estimation"""
@@ -142,13 +142,13 @@ class Args:
     """to use pretrained neural agent"""
     joint_training: bool = False
     """jointly train neural actor and logic actor and blender"""
-    learning_rate: float = 2.5e-5
+    learning_rate: float = 2.5e-4
     """the learning rate of the optimizer (neural)"""
     logic_learning_rate: float = 2.5e-4
     """the learning rate of the optimizer (logic)"""
     blender_learning_rate: float = 2.5e-4
     """the learning rate of the optimizer (blender)"""
-    blend_ent_coef: float = 0.1
+    blend_ent_coef: float = 0.01
     """coefficient of the blend entropy"""
 
 
@@ -291,7 +291,9 @@ def main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            rtpt.step()
+            # update rtpt
+            for _ in range(args.num_envs):
+                rtpt.step()
             global_step += args.num_envs
             obs[step] = next_obs
             # print(logic_obs.shape)

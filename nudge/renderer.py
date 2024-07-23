@@ -108,12 +108,16 @@ class Renderer:
             else:  # AI plays the game
                 # print("obs_nn: ", obs_nn.shape)
                 action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
+                value = self.model.get_value(obs_nn, obs)
+                print(value.item())
                 # state = (obs_nn, th.unsqueeze(obs, 0))
                 # action = self.model.select_action(state)  # update the model's internals
                 # action, _ = self.model.act(th.unsqueeze(obs, 0))
                 # action = self.predicates[action.item()]
 
             (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
+            # print("Reward: ", reward)
+            # print(infos)
             new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
             
             # self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
@@ -228,7 +232,7 @@ class Renderer:
         # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         policy_names = ['neural', 'logic']
         weights = model.get_policy_weights()
-        print(weights)
+        # print(weights)
         for i, w_i in enumerate(weights):
             w_i = w_i.item()
             name = policy_names[i]

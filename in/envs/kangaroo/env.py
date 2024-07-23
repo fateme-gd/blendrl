@@ -13,7 +13,15 @@ from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
 
-
+def reduce_enemy_reward(r):
+    print(r)
+    if r == 200:
+        return 20
+    else:
+        return r
+    
+    
+    
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
     EpisodicLifeEnv,
@@ -34,6 +42,7 @@ def make_env(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     env = gym.wrappers.GrayScaleObservation(env)
     env = gym.wrappers.FrameStack(env, 4)
+    env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
     return env
 
 
@@ -55,6 +64,7 @@ class NudgeEnv(NudgeBaseEnv):
             ("disable_coconut"), \
             # ("disable_monkeys"), \
             ("random_init"), ("change_level0")],\
+            rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl
         self.env._env = make_env(self.env._env)

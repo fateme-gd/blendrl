@@ -159,7 +159,8 @@ def main():
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
+    # model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
+    model_description = "{}".format(args.blend_function)
     learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_gamma_{args.gamma}_bentcoef_{args.blend_ent_coef}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_name}_{model_description}_{learning_description}_{args.seed}"
     if args.track:

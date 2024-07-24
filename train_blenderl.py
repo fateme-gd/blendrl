@@ -60,7 +60,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(40)
+torch.set_num_threads(5)
 
 @dataclass
 class Args:
@@ -84,7 +84,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Seaquest-v4"
     """the id of the environment"""
-    total_timesteps: int = 20000000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     num_envs: int = 20
     """the number of parallel game environments"""
@@ -136,7 +136,7 @@ class Args:
     """the mode for the agent"""
     rules: str = "default"
     """the ruleset used in the agent"""
-    save_steps: int = 1000000
+    save_steps: int = 500000
     """the number of steps to save models"""
     pretrained: bool = False
     """to use pretrained neural agent"""
@@ -159,7 +159,8 @@ def main():
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
+    # model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
+    model_description = "{}".format(args.blend_function)
     learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_blr_{args.blender_learning_rate}_gamma_{args.gamma}_bentcoef_{args.blend_ent_coef}_numenvs_{args.num_envs}_steps_{args.num_steps}_pretrained_{args.pretrained}_joint_{args.joint_training}"
     run_name = f"{args.env_name}_{model_description}_{learning_description}_{args.seed}"
     if args.track:

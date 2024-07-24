@@ -65,7 +65,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--env-name",
-                "kangaroo"
+                "kangaroo",
+                "--num_envs",
+                "2",
             ],
         },
     ]

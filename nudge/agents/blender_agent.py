@@ -270,3 +270,4 @@ class BlenderActorCritic(nn.Module):
             pickle.dump(step_list, f)
             pickle.dump(reward_list, f)
             pickle.dump(weight_list, f)
+            

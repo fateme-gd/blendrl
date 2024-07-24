@@ -10,6 +10,7 @@ import re
 from .agents.logic_agent import NsfrActorCritic
 from .agents.neural_agent import ActorCritic
 from nudge.env import NudgeBaseEnv
+from nudge.env_vectorized import VectorizedNudgeBaseEnv
 from functools import reduce
 from nsfr.utils.torch import softor
 
@@ -34,10 +35,10 @@ def get_action_stats(env, actions):
     action_proportion = to_proportion(frequency_dic)
     return action_proportion
 
-def save_hyperparams(signature, local_scope, save_path, print_summary: bool = False):
+def save_hyperparams(args, save_path, print_summary: bool = False):
     hyperparams = {}
-    for param in signature.parameters:
-        hyperparams[param] = local_scope[param]
+    for key, value in vars(args).items():
+        hyperparams[key] = value #local_scope[param]
     with open(save_path, 'w') as f:
         yaml.dump(hyperparams, f)
     if print_summary:
@@ -83,13 +84,15 @@ def load_model(model_dir,
     checkpoint_dir = model_dir / "checkpoints"
     most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
+    
+    print("Loading model from", checkpoint_path)
 
     # Load model's configuration
     with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.Loader)
 
     algorithm = config["algorithm"]
-    environment = config["environment"]
+    environment = config["env_name"]
     env_kwargs = config["env_kwargs"]
     env_kwargs.update(env_kwargs_override)
 
@@ -114,6 +117,49 @@ def load_model(model_dir,
     # print(model.logic_actor.im.W)
 
     return model
+
+
+def load_model_train(model_dir,
+                     n_envs,
+               device=torch.device('cuda:0')):
+    from .agents.blender_agent import BlenderActorCritic
+    # Determine all relevant paths
+    model_dir = Path(model_dir)
+    config_path = model_dir / "config.yaml"
+    checkpoint_dir = model_dir / "checkpoints"
+    most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
+    
+    print("Loading model from", checkpoint_path)
+
+    # Load model's configuration
+    with open(config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+
+    algorithm = config["algorithm"]
+    environment = config["env_name"]
+
+    # Setup the environment
+    env = VectorizedNudgeBaseEnv.from_name(environment, n_envs=n_envs, mode=algorithm)
+
+    rules = config["rules"]
+
+    print("Loading...")
+    # Initialize the model
+    if algorithm == 'ppo':
+        model = ActorCritic(env).to(device)
+    elif algorithm == 'logic':
+        model = NsfrActorCritic(env, device=device, rules=rules).to(device)
+    else:
+        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], blend_function=config["blend_function"], device=device).to(device)
+
+    # Load the model weights
+    with open(checkpoint_path, "rb") as f:
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
+    # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
+    # print(model.logic_actor.im.W)
+
+    return model, most_recent_step
 
 
 def yellow(text):

@@ -10,50 +10,24 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import tyro
-from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-from stable_baselines3.common.atari_wrappers import (  # isort:skip
-    ClipRewardEnv,
-    EpisodicLifeEnv,
-    FireResetEnv,
-    MaxAndSkipEnv,
-    NoopResetEnv,
-)
 
 # added
 from nudge.agents.blender_agent import BlenderActorCritic
 from nudge.env_vectorized import VectorizedNudgeBaseEnv
-import csv
+from nudge.utils import save_hyperparams
 import os
 import sys
 import time
-from datetime import datetime
-from inspect import signature
 from pathlib import Path
-from typing import Callable
 
-from rtpt import RTPT
-
-
-import torch
+import pickle
 import random
 import numpy as np
-import yaml
 from rtpt import RTPT
-from torch.optim import Optimizer, Adam
-from torch.utils.tensorboard import SummaryWriter
-from tqdm import tqdm
 
-# from nudge.agents.logic_agent import LogicPPO
-# from nudge.agents.neural_agent import NeuralPPO
-# from nudge.agents.deictic_agent import DeicticPPO
-from nudge.env import NudgeBaseEnv
-from nudge.utils import make_deterministic, save_hyperparams
-from nudge.utils import exp_decay, get_action_stats
-from nudge.utils import add_noise
-
-from utils import load_logic_ppo
+from nudge.utils import load_model_train
 
 # Log in to your W&B account
 import wandb
@@ -150,6 +124,8 @@ class Args:
     """the learning rate of the optimizer (blender)"""
     blend_ent_coef: float = 0.01
     """coefficient of the blend entropy"""
+    recover: bool = False
+    """recover the training from the last checkpoint"""
 
 
 def main():
@@ -173,7 +149,20 @@ def main():
             monitor_gym=True,
             save_code=True,
         )
-    writer = SummaryWriter(f"runs/{run_name}")
+
+    # for logging and model saving
+    experiment_dir = OUT_PATH / "runs" / run_name # / now.strftime("%y-%m-%d-%H-%M")
+    checkpoint_dir = experiment_dir / "checkpoints"
+    writer_base_dir = OUT_PATH / "tensorboard" # Path("tensorboard")
+    writer_dir = writer_base_dir / run_name
+    image_dir = experiment_dir / "images"
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(image_dir, exist_ok=True)
+    os.makedirs(writer_dir, exist_ok=True)
+    # os.makedirs("tensorboard", exist_ok=True)
+    
+    # writer = SummaryWriter(f"runs/{run_name}")
+    writer = SummaryWriter(writer_dir)
     writer.add_text(
         "hyperparameters",
         "|param|value|\n|-|-|\n%s" % ("\n".join([f"|{key}|{value}|" for key, value in vars(args).items()])),
@@ -198,40 +187,29 @@ def main():
         # agent = load_logic_ppo(path="models/logic_ppo_agent_Seaquest-v4.pth", agent=agent)
         agent.to(device)
         # print("Pretrained logic agent loaded!!!")
+        
+    if args.recover:
+        # load saved agent with the most recent step
+        agent, most_recent_step = load_model_train(experiment_dir, n_envs=args.num_envs, device=device)
+        # load training logs
+        with open(checkpoint_dir / "training_log.pkl", "rb") as f:
+            episodic_returns, episodic_lengths, value_losses, policy_losses, entropies, blend_entropies = pickle.load(f)
+    else:
+        episodic_returns = []
+        episodic_lengths = []
+        value_losses = []
+        policy_losses = []
+        entropies = []
+        blend_entropies = []
+        
     agent._print()
     if args.track:
         wandb.watch(agent)
         
+
+        
     rtpt.start()
-    parameters = list(agent.logic_actor.parameters()) + list(agent.blender.parameters())
-    # parameters = list(agent.visual_neural_actor.parameters()) + list(agent.logic_actor.parameters()) + list(agent.blender.parameters())
-    # optimizer = optim.Adam(parameters, lr=args.learning_rate, eps=1e-5)
-    if not args.joint_training:
-        if args.algorithm == "blender":
-            optimizer = optim.Adam(
-                [
-                    # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
-                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
-                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.blender_learning_rate},
-                ],
-                # lr=args.learning_rate,
-                eps = 1e-5
-            )
-        elif args.algorithm == "neural":
-            optimizer = optim.Adam(
-                [
-                    # {"params": agent.visual_neural_actor.parameters(), "lr": 2.5e-5},
-                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
-                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.blender_learning_rate},
-                ],
-                # lr=args.learning_rate,
-                eps = 1e-5
-            )
-    else:
-        if args.algorithm == "blender":
-            optimizer = optim.Adam(
+    optimizer = optim.Adam(
                 [
                     {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
                     {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
@@ -240,21 +218,8 @@ def main():
                 ],
                 lr=args.learning_rate,
                 eps = 1e-5
-            )
-        elif args.algorithm == "neural":
-            optimizer = optim.Adam(
-                [
-                    {"params": agent.visual_neural_actor.parameters(), "lr": args.learning_rate},
-                    {"params": agent.logic_actor.parameters(), "lr": args.logic_learning_rate},
-                    {"params": agent.logic_critic.parameters(), "lr": args.learning_rate},
-                    {"params": agent.blender.parameters(), "lr": args.blenderlearning_rate},
-                ],
-                # lr=args.learning_rate,
-                eps = 1e-5
-            )
+                )
         
-
-
     # ALGO Logic: Storage setup
     observation_space = (4, 84, 84)
     # logic_observation_space = (84, 51, 4)
@@ -272,6 +237,10 @@ def main():
     # TRY NOT TO MODIFY: start the game
     global_step = 0
     save_step_bar = 0 # args.save_steps
+    if args.recover:
+        global_step = most_recent_step
+        save_step_bar = most_recent_step
+    print(global_step, save_step_bar)
     start_time = time.time()
     next_logic_obs, next_obs = envs.reset()#(seed=seed)
     # 1 env 
@@ -338,28 +307,32 @@ def main():
                         print(f"global_step={global_step}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                        episodic_returns.append(info["episode"]["r"])
+                        episodic_lengths.append(info["episode"]["l"])
               
             # Save the model      
             if global_step > save_step_bar:
-                experiment_dir = OUT_PATH / "runs" / run_name # / now.strftime("%y-%m-%d-%H-%M")
-                checkpoint_dir = experiment_dir / "checkpoints"
-                image_dir = experiment_dir / "images"
-                os.makedirs(checkpoint_dir, exist_ok=True)
-                os.makedirs(image_dir, exist_ok=True)
-
                 checkpoint_path = checkpoint_dir / f"step_{save_step_bar}.pth"
                 agent.save(checkpoint_path, checkpoint_dir, [], [], [])
                 print("\nSaved model at:", checkpoint_path)
                 
+                
+                # save hyper params
+                save_hyperparams(args=args, #signature(main),
+                    #local_scope=locals(),
+                    save_path=experiment_dir / "config.yaml",
+                    print_summary=True)
+                
+                # save training data
+                training_log = (episodic_returns, episodic_lengths, value_losses, policy_losses, entropies, blend_entropies)
+                with open(checkpoint_dir / "training_log.pkl", "wb") as f:
+                    pickle.dump(training_log, f)
+                    
+                
                 # increase the updated bar
                 save_step_bar += args.save_steps
                 
-                # save hyper params
-                save_hyperparams(signature=signature(main),
-                     local_scope=locals(),
-                     save_path=experiment_dir / "config.yaml",
-                     print_summary=True)
-
+                
         # bootstrap value if not done
         with torch.no_grad():
             next_value = agent.get_value(next_obs, next_logic_obs).reshape(1, -1)
@@ -455,14 +428,23 @@ def main():
         writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
         writer.add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
         writer.add_scalar("losses/explained_variance", explained_var, global_step)
-        print("SPS:", int(global_step / (time.time() - start_time)))
-        writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+        # the first SPS after the recovery is not accurate
+        if int(global_step / (time.time() - start_time)) < 10000:
+            print("SPS:", int(global_step / (time.time() - start_time)))
+            writer.add_scalar("charts/SPS", int(global_step / (time.time() - start_time)), global_step)
+            
+        # save training data
+        value_losses.append(v_loss.item())
+        policy_losses.append(pg_loss.item())
+        entropies.append(entropy_loss.item())
+        blend_entropies.append(blend_entropy_loss.item())
+        
+        # print current agent information
         agent._print()
         
 
     envs.close()
     writer.close()
-
 
 
 

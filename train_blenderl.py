@@ -60,7 +60,7 @@ import wandb
 OUT_PATH = Path("out/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(40)
+torch.set_num_threads(5)
 
 @dataclass
 class Args:
@@ -84,7 +84,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Seaquest-v4"
     """the id of the environment"""
-    total_timesteps: int = 20000000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     num_envs: int = 20
     """the number of parallel game environments"""
@@ -136,7 +136,7 @@ class Args:
     """the mode for the agent"""
     rules: str = "default"
     """the ruleset used in the agent"""
-    save_steps: int = 1000000
+    save_steps: int = 500000
     """the number of steps to save models"""
     pretrained: bool = False
     """to use pretrained neural agent"""

@@ -12,9 +12,9 @@ def reward_function(self, game_reward) -> float:
     #if game_reward == 1.0 and player.prev_y == 4:
     #    reward = 100.0
     if player.y == 4 and player.prev_y != 4:
-        reward = 100.0
+        reward = 1.0
     elif game_reward == 1.0 and player.prev_y != 4:
-        reward = game_reward
+        reward = 0.05
     else:
         reward = 0.0
     return reward

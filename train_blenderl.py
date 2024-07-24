@@ -204,7 +204,7 @@ def main():
         
     agent._print()
     if args.track:
-        wandb.watch(agent)
+        wandb.watch([agent.logic_actor, agent.logic_critic, agent.visual_neural_actor, agent.blender]) #, log="all")
         
 
         
@@ -240,7 +240,6 @@ def main():
     if args.recover:
         global_step = most_recent_step
         save_step_bar = most_recent_step
-    print(global_step, save_step_bar)
     start_time = time.time()
     next_logic_obs, next_obs = envs.reset()#(seed=seed)
     # 1 env 
@@ -290,7 +289,9 @@ def main():
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
-
+            # for r in reward:
+            #     if r > 0.5:
+            #         print("Reward:", reward)
             # Plot image
             # next_obs_array = next_obs.detach().cpu().numpy()
             # max_rgb = np.max(next_obs_array)

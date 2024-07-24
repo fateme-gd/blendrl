@@ -14,7 +14,7 @@ from stable_baselines3.common.vec_env import VecFrameStack
 from utils import load_cleanrl_envs
 
 def reduce_enemy_reward(r):
-    print(r)
+    # print(r)
     if r == 200:
         return 20
     else:

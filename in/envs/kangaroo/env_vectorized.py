@@ -43,7 +43,7 @@ def make_env(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     env = gym.wrappers.GrayScaleObservation(env)
     env = gym.wrappers.FrameStack(env, 4)
-    env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
+    # env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
     return env
 
 
@@ -66,8 +66,9 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         self.n_envs = n_envs
         # self.envs = [OCAtari(env_name="Kangaroo-v4", mode="ram", obs_mode="ori",
         #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
-        self.envs = [HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[ ("disable_coconut"), ("random_init"), ("change_level0")], rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
-                            render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
+        self.envs = [HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[ ("disable_coconut"), ("random_init"), ("change_level0")],\
+            rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
+            render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
         # apply wrapper to _env in OCAtari
         for i in range(n_envs):
             self.envs[i]._env = make_env(self.envs[i]._env)
@@ -119,6 +120,8 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             action = actions[i]
             # make a step in the env
             obs, reward, truncation, done, info = env.step(action)
+            # if reward > 0.5:
+            #     print("Reward: ", reward) 
             # lazy frame to tensor
             obs = torch.tensor(obs).float()
             # get logic and neural state

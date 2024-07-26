@@ -42,7 +42,7 @@ def make_env(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     env = gym.wrappers.GrayScaleObservation(env)
     env = gym.wrappers.FrameStack(env, 4)
-    env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
+    # env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
     return env
 
 

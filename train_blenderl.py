@@ -58,7 +58,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Seaquest-v4"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 20000000
     """total timesteps of the experiments"""
     num_envs: int = 20
     """the number of parallel game environments"""
@@ -110,7 +110,7 @@ class Args:
     """the mode for the agent"""
     rules: str = "default"
     """the ruleset used in the agent"""
-    save_steps: int = 500000
+    save_steps: int = 1000000
     """the number of steps to save models"""
     pretrained: bool = False
     """to use pretrained neural agent"""
@@ -202,11 +202,12 @@ def main():
         entropies = []
         blend_entropies = []
         
+    # rewards actually used to train modes
+    episodic_game_rewards= torch.zeros((args.num_envs)).to(device) 
+        
     agent._print()
     if args.track:
         wandb.watch([agent.logic_actor, agent.logic_critic, agent.visual_neural_actor, agent.blender]) #, log="all")
-        
-
         
     rtpt.start()
     optimizer = optim.Adam(
@@ -289,6 +290,8 @@ def main():
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
+            episodic_game_rewards += torch.tensor(reward).to(device).view(-1)
+            # print("episodic game reward: ", episodic_game_rewards.detach().cpu().numpy())
             # for r in reward:
             #     if r > 0.5:
             #         print("Reward:", reward)
@@ -300,16 +303,22 @@ def main():
             #     image = wandb.Image(next_obs_array[0][i], caption=f"State at global_step={global_step}_{i}")
             #     wandb.log({"state_image": image})
         
-            for info_ in infos:
+            for k, info_ in enumerate(infos):
                 if "final_info" in info_: # or next_done.any():
                     info = info_['final_info']
                     # final_info = info['final_info']
                     if "episode" in info:
-                        print(f"global_step={global_step}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
+                        # print(f"global_step={global_step}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
+                        print(f"env={k}, global_step={global_step}, episodic_game_reward={np.round(episodic_game_rewards[k].detach().cpu().numpy(), 2)}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                         episodic_returns.append(info["episode"]["r"])
                         episodic_lengths.append(info["episode"]["l"])
+                        
+                        # save the game reward and reset
+                        writer.add_scalar("charts/episodic_game_reward", episodic_game_rewards[k], global_step)
+                        episodic_game_rewards[k] = 0
+                        print("Environment {} has been reset".format(k))
               
             # Save the model      
             if global_step > save_step_bar:

@@ -67,7 +67,8 @@
                 "--env-name",
                 "kangaroo",
                 "--num_envs",
-                "2",
+                "4",
+                "--track"
             ],
         },
     ]

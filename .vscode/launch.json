@@ -67,8 +67,16 @@
                 "--env-name",
                 "kangaroo",
                 "--num_envs",
-                "2",
+                "5",
             ],
+        },
+        {
+            "name": "test render multi envs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui_vectorized.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
         },
     ]
 }

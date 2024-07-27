@@ -13,14 +13,6 @@ from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
 
-def reduce_enemy_reward(r):
-    # print(r)
-    if r == 200:
-        return 20
-    else:
-        return r
-    
-    
     
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -42,11 +34,20 @@ def make_env(env):
     env = gym.wrappers.ResizeObservation(env, (84, 84))
     env = gym.wrappers.GrayScaleObservation(env)
     env = gym.wrappers.FrameStack(env, 4)
-    # env = gym.wrappers.TransformReward(env, reduce_enemy_reward)
     return env
 
 
 class NudgeEnv(NudgeBaseEnv):
+    """
+    NUDGE environment for Kangaroo.
+    
+    Args:
+        mode (str): Mode of the environment. Possible values are "train" and "eval".
+        n_envs (int): Number of environments.
+        render_mode (str): Mode of rendering. Possible values are "rgb_array" and "human".
+        render_oc_overlay (bool): Whether to render the overlay of OC.
+        seed (int): Seed for the environment.
+    """
     name = "kangaroo"
     pred2action = {
         'noop': 0,
@@ -59,14 +60,23 @@ class NudgeEnv(NudgeBaseEnv):
     pred_names: Sequence
 
     def __init__(self, mode: str, render_mode="rgb_array", render_oc_overlay=False, seed=None):
+        """
+        Constructor for the VectorizedNudgeEnv class.
+        
+        Args:
+            mode (str): Mode of the environment. Possible values are "train" and "eval".
+            n_envs (int): Number of environments.
+            render_mode (str): Mode of rendering. Possible values are "rgb_array" and "human".
+            render_oc_overlay (bool): Whether to render the overlay of OC.
+            seed (int): Seed for the environment.
+        """
         super().__init__(mode)
-        self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori", modifs=[\
-            ("disable_coconut"), \
-            # ("disable_monkeys"), \
-            ("random_init"), ("change_level0")],\
+        self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori",\
+            modifs=[("disable_coconut"), ("random_init"), ("change_level0")],\
             rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
-        # for learning script from cleanrl
+        
+        # apply wrapper to _env
         self.env._env = make_env(self.env._env)
         self.n_actions = 6
         self.n_raw_actions = 18
@@ -83,62 +93,61 @@ class NudgeEnv(NudgeBaseEnv):
         self.relevant_objects = set(MAX_ESSENTIAL_OBJECTS.keys())
 
     def reset(self):
-        obs, _ = self.env.reset(seed=self.seed)
-        # raw_state, _ = self.raw_env.reset(seed=self.seed)
-        # raw_state = raw_state.unsqueeze(0)
+        """
+        Reset the environment.
+        
+        Returns:
+            logic_state (torch.Tensor): Logic state of the environment.
+            neural_state (torch.Tensor): Neural state of the environment.
+        """
+        raw_state, _ = self.env.reset(seed=self.seed)
         state = self.env.objects
-        raw_state = obs #self.env.dqn_obs
         logic_state, neural_state =  self.extract_logic_state(state), self.extract_neural_state(raw_state)
-        # if len(logic_state.shape) == 2:
         logic_state = logic_state.unsqueeze(0)
         return logic_state, neural_state
-        # return  self.convert_state(state, raw_state)
 
-    def step(self, action, is_mapped: bool = False):
-        # if not is_mapped:
-        #     action = self.map_action(action)
-        # step RAM env
-        # obs, reward, done, _, _ = self.env.step(action)
-        # action = array([2]) or action = torch.tensor(2)
-        # try:
-        #     assert action.shape[0] == 1, "invalid only 1 action for env.step"
-        #     action = action[0]
-        # except IndexError:
-        #     action = action
+    def step(self, action):
+        """
+        Perform a step in the environment.
         
-
-            
-        # obs, reward, done, truncations, infos = self.env.step(action)
-        obs, reward, truncations, done, infos = self.env.step(action)
-        
-        # ste RGB env
-        # x = self.raw_env.step(action.unsqueeze(0)) 
-        # raw_obs, raw_reward, raw_done, _, _ = x
-        # assert reward == raw_reward and done == raw_done, "Two envs conflict: rewards: {} and {}, dones: {} and {}".format(reward, raw_reward, done, raw_done)  
-        # assert done == raw_done, "Two envs conflict: dones: {} and {}".format(done, raw_done)  
+        Args:
+            action (torch.Tensor): Action to perform.
+        Returns:
+            logic_state (torch.Tensor): Logic state of the environment.
+            neural_state (torch.Tensor): Neural state of the environment.
+            reward (float): Reward obtained.
+            done (bool): Whether the episode is done.
+            truncations (dict): Truncations.
+            infos (dict): Additional information.
+        """
+        raw_state, reward, truncations, done, infos = self.env.step(action)
         state = self.env.objects
-        raw_state = obs #self.env.dqn_obs
-        # raw_state = raw_obs
-        # raw_state = raw_state.unsqueeze(0)
         logic_state, neural_state = self.convert_state(state, raw_state)
-        # if len(logic_state.shape) == 2:
         logic_state = logic_state.unsqueeze(0)
         return (logic_state, neural_state), reward, done, truncations, infos
 
     def extract_logic_state(self, input_state):
-        """ in ocatari/ram/kangaroo.py :
-        MAX_ESSENTIAL_OBJECTS = {
-            'Player': 1,
-            'Child': 1,
-            'Fruit': 3,
-            'Bell': 1,
-            'Platform': 20,
-            'Ladder': 6,
-            'Monkey': 4,
-            'FallingCoconut': 1,
-            'ThrownCoconut': 3,
-            'Life': 8,
-            'Time': 1,}       
+        """ 
+        Extracts the logic state from the input state.
+        Args:
+            input_state (list): List of objects in the environment.
+        Returns:
+            torch.Tensor: Logic state.
+        
+        Comment:
+            in ocatari/ram/kangaroo.py :
+                MAX_ESSENTIAL_OBJECTS = {
+                    'Player': 1,
+                    'Child': 1,
+                    'Fruit': 3,
+                    'Bell': 1,
+                    'Platform': 20,
+                    'Ladder': 6,
+                    'Monkey': 4,
+                    'FallingCoconut': 1,
+                    'ThrownCoconut': 3,
+                    'Life': 8,
+                    'Time': 1,}       
         """
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
 
@@ -157,8 +166,17 @@ class NudgeEnv(NudgeBaseEnv):
         return state
 
     def extract_neural_state(self, raw_input_state):
-        # print(raw_input_state.shape)
+        """
+        Extracts the neural state from the raw input state.
+        Args:
+            raw_input_state (torch.Tensor): Raw input state.
+        Returns:
+            torch.Tensor: Neural state.
+        """
         return torch.Tensor(raw_input_state).unsqueeze(0)#.float()
 
     def close(self):
+        """
+        Close the environment.
+        """
         self.env.close()

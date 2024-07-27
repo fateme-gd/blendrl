@@ -93,8 +93,10 @@ def load_model(model_dir,
 
     algorithm = config["algorithm"]
     environment = config["env_name"]
-    env_kwargs = config["env_kwargs"]
-    env_kwargs.update(env_kwargs_override)
+    # env_kwargs = config["env_kwargs"]
+    # env_kwargs.update(env_kwargs_override)
+    # env_kwargs = dict(render_oc_overlay=True)
+    env_kwargs = {}
 
     # Setup the environment
     env = NudgeBaseEnv.from_name(environment, mode=algorithm, **env_kwargs)

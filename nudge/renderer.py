@@ -16,6 +16,7 @@ PREDICATE_PROBS_COL_WIDTH = 300
 FACT_PROBS_COL_WIDTH = 1000
 CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
+CELL_BACKGROUND_HIGHLIGHT_POLICY = np.array([234, 145, 152])
 
 class Renderer:
     model: Union[NsfrActorCritic, ActorCritic]
@@ -239,7 +240,7 @@ class Renderer:
             w_i = w_i.item()
             name = policy_names[i]
             # Render cell background
-            color = w_i * CELL_BACKGROUND_HIGHLIGHT + (1 - w_i) * CELL_BACKGROUND_DEFAULT
+            color = w_i * CELL_BACKGROUND_HIGHLIGHT_POLICY + (1 - w_i) * CELL_BACKGROUND_DEFAULT
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * 35,

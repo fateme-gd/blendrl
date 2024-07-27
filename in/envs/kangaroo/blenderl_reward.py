@@ -10,6 +10,7 @@ def reward_function(self, game_reward) -> float:
     # got reawrd and previous step was on the top platform -> reached the child
     # if game_reward == 1.0 and player.prev_y == 4:
     #    reward = 10.0
+    # x = 129
     if player.y == 4:
         reward = 0.2
     # BUG ↓ with multi envs, rewards collected repeatedly 

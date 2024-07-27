@@ -121,12 +121,13 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         print("Env reset is done.")
         return torch.stack(logic_states), torch.stack(neural_states)
 
-    def step(self, actions):
+    def step(self, actions, is_mapped=False):
         """
         Perform a step in the environment.
         
         Args:
             actions (torch.Tensor): Actions to be performed in the environment.
+            is_mapped (bool): Whether the actions are already mapped.
         Returns:
             Tuple: Tuple containing:
                 - torch.Tensor: Observations.

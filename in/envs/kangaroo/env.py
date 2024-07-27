@@ -106,12 +106,13 @@ class NudgeEnv(NudgeBaseEnv):
         logic_state = logic_state.unsqueeze(0)
         return logic_state, neural_state
 
-    def step(self, action):
+    def step(self, action, is_mapped=False):
         """
         Perform a step in the environment.
         
         Args:
             action (torch.Tensor): Action to perform.
+            is_mapped (bool): Whether the action is already mapped.
         Returns:
             logic_state (torch.Tensor): Logic state of the environment.
             neural_state (torch.Tensor): Neural state of the environment.

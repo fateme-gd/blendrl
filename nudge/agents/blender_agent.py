@@ -375,7 +375,7 @@ class BlenderActorCritic(nn.Module):
             action = dist.sample()
         logprob = dist.log_prob(action)
         
-        # Compute action probabilities using each neural and logic value function
+        # Compute state values using each neural and logic value function
         # size: n_envs * 1
         neural_value = self.get_neural_value(neural_state)
         logic_value = self.get_logic_value(logic_state)

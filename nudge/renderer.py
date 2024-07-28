@@ -12,11 +12,12 @@ from nudge.utils import load_model, yellow
 from nudge.env import NudgeBaseEnv
 
 SCREENSHOTS_BASE_PATH = "out/screenshots/"
-PREDICATE_PROBS_COL_WIDTH = 300
+PREDICATE_PROBS_COL_WIDTH = 500
 FACT_PROBS_COL_WIDTH = 1000
 CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
 CELL_BACKGROUND_HIGHLIGHT_POLICY = np.array([234, 145, 152])
+CELL_BACKGROUND_SELECTED = np.array([80, 80, 80])
 
 
 class Renderer:
@@ -57,7 +58,7 @@ class Renderer:
         except Exception:
             print(yellow("Info: No key-to-action mapping found for this env. No manual user control possible."))
             self.action_meanings = None
-            self.keys2actions = None
+            self.keys2actions = {}
         self.current_keys_down = set()
 
         # self.nsfr_reasoner = self.model.actor.logic_actor
@@ -72,12 +73,12 @@ class Renderer:
         self.reset = False
         self.takeover = False
         
-        self.video = vidmaker.Video("vidmaker.mp4", late_export=True)
+        # self.video = vidmaker.Video("vidmaker.mp4", late_export=True)
 
     def _init_pygame(self):
         pygame.init()
         pygame.display.set_caption("Environment")
-        frame = self.env.env.render().swapaxes(0, 1)
+        frame = self.env.env.render()
         self.env_render_shape = frame.shape[:2]
         window_shape = list(self.env_render_shape)
         if self.render_predicate_probs:
@@ -98,14 +99,14 @@ class Renderer:
             self.reset = False
             self._handle_user_input()
             if not self.paused:
-                self.video.update(pygame.surfarray.pixels3d(self.window).swapaxes(0, 1), inverted=False) # THIS LINE
+                # self.video.update(pygame.surfarray.pixels3d(self.window), inverted=False) # THIS LINE
 
                 if not self.running:
                     break  # outer game loop
 
                 if self.takeover:  # human plays game manually
-                    assert False, "Unimplemented."
-                    # action = self._get_action()
+                    # assert False, "Unimplemented."
+                    action = self._get_action()
                     # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
                 else:  # AI plays the game
                     # print("obs_nn: ", obs_nn.shape)
@@ -146,6 +147,7 @@ class Renderer:
                     print(f"Return: {ret} - Length {length}")
                     ret = 0
                     length = 0
+                    self.env.reset()
 
         pygame.quit()
 
@@ -174,10 +176,17 @@ class Renderer:
                     self.reset = True
 
                 elif event.key == pygame.K_f:  # 'F': fast forward
-                    self.fast_forward = True
+                    self.fast_forward = not(self.fast_forward)
 
                 elif event.key == pygame.K_t:  # 'T': trigger takeover
+                    if self.takeover:
+                        print("AI takeover")
+                    else:
+                        print("Human takeover")
                     self.takeover = not self.takeover
+                
+                elif event.key == pygame.K_o:  # 'O': toggle overlay
+                    self.env.env.render_oc_overlay = not(self.env.env.render_oc_overlay)
 
                 elif event.key == pygame.K_c:  # 'C': capture screenshot
                     file_name = f"{datetime.strftime(datetime.now(), '%Y-%m-%d-%H-%M-%S')}.png"
@@ -190,8 +199,8 @@ class Renderer:
                 if (event.key,) in self.keys2actions.keys():
                     self.current_keys_down.remove(event.key)
 
-                elif event.key == pygame.K_f:  # 'F': fast forward
-                    self.fast_forward = False
+                # elif event.key == pygame.K_f:  # 'F': fast forward
+                #     self.fast_forward = False
 
     def _render(self):
         self.window.fill((20, 20, 20))  # clear the entire window
@@ -208,21 +217,7 @@ class Renderer:
             self.clock.tick(self.fps)
 
     def _render_env(self):
-        import cv2
-        from PIL import Image
-        # frame = self.env.env.render().swapaxes(0, 1)
-        frame = self.env.env.render().swapaxes(0, 1)
-        #frame_surface = pygame.Surface(self.env_render_shape)
-        # frame = np.flipud(frame)
-        frame = np.fliplr(frame)
-        frame = np.rot90(frame)
-        
-        frame_img = Image.fromarray(frame)
-        # frame_img_resized = cv2.resize(frame_img, self.env_render_shape)
-        # frame_img_resized = frame_img.resize(self.env_render_shape)
-        frame_img_resized = frame_img.resize((self.env_render_shape[1], self.env_render_shape[0]))
-        frame = np.array(frame_img_resized)
-        # frame = np.fliplr(frame)
+        frame = self.env.env.render()
         frame_surface = pygame.Surface(self.env_render_shape)
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))

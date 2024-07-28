@@ -18,6 +18,7 @@ CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
 CELL_BACKGROUND_HIGHLIGHT_POLICY = np.array([234, 145, 152])
 
+
 class Renderer:
     model: Union[NsfrActorCritic, ActorCritic]
     window: pygame.Surface

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def reward_function(self, game_reward) -> float:
+def reward_function(self) -> float:
     for obj in self.objects:
         if 'player' in str(obj).lower():
             player = obj
@@ -16,7 +16,7 @@ def reward_function(self, game_reward) -> float:
     # BUG ↓ with multi envs, rewards collected repeatedly 
     # if player.y == 4 and player.prev_y != 4:
     #     reward = 1.0
-    elif game_reward == 1.0 and player.prev_y != 4:
+    elif self.org_reward == 1.0 and player.prev_y != 4:
         reward = 0.05
     else:
         reward = 0.0

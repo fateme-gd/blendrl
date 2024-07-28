@@ -53,7 +53,7 @@ class Renderer:
 
         try:
             self.action_meanings = self.env.env.get_action_meanings()
-            self.keys2actions = self.env.env.get_keys_to_action()
+            self.keys2actions = self.env.env.unwrapped.get_keys_to_action()
         except Exception:
             print(yellow("Info: No key-to-action mapping found for this env. No manual user control possible."))
             self.action_meanings = None
@@ -96,41 +96,40 @@ class Renderer:
 
         while self.running:
             self.reset = False
-            # self._handle_user_input()
-
-            self.video.update(pygame.surfarray.pixels3d(self.window).swapaxes(0, 1), inverted=False) # THIS LINE
-
-            if not self.running:
-                break  # outer game loop
-
-            if self.takeover:  # human plays game manually
-                assert False, "Unimplemented."
-                # action = self._get_action()
-                # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
-            else:  # AI plays the game
-                # print("obs_nn: ", obs_nn.shape)
-                action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
-                value = self.model.get_value(obs_nn, obs)
-                print("value:" , np.round(value.item(), 3))
-                # state = (obs_nn, th.unsqueeze(obs, 0))
-                # action = self.model.select_action(state)  # update the model's internals
-                # action, _ = self.model.act(th.unsqueeze(obs, 0))
-                # action = self.predicates[action.item()]
-
-            (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
-            if reward > 0:
-                print(f"Reward: {reward:.2f}")
-            # print("Reward: ", reward)
-            # print(infos)
-            new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
-            
-            # self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
-            # print(self.model.actor.logic_actor.V_T)
-            # self.model.actor.logic_actor.print_valuations()
-
-            self._render()
-
+            self._handle_user_input()
             if not self.paused:
+                self.video.update(pygame.surfarray.pixels3d(self.window).swapaxes(0, 1), inverted=False) # THIS LINE
+
+                if not self.running:
+                    break  # outer game loop
+
+                if self.takeover:  # human plays game manually
+                    assert False, "Unimplemented."
+                    # action = self._get_action()
+                    # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
+                else:  # AI plays the game
+                    # print("obs_nn: ", obs_nn.shape)
+                    action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
+                    value = self.model.get_value(obs_nn, obs)
+                    print("value:" , np.round(value.item(), 3))
+                    # state = (obs_nn, th.unsqueeze(obs, 0))
+                    # action = self.model.select_action(state)  # update the model's internals
+                    # action, _ = self.model.act(th.unsqueeze(obs, 0))
+                    # action = self.predicates[action.item()]
+
+                (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
+                if reward > 0:
+                    print(f"Reward: {reward:.2f}")
+                # print("Reward: ", reward)
+                # print(infos)
+                new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
+                
+                # self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
+                # print(self.model.actor.logic_actor.V_T)
+                # self.model.actor.logic_actor.print_valuations()
+
+                self._render()
+
                 if self.takeover and float(reward) != 0:
                     print(f"Reward {reward:.2f}")
 
@@ -236,7 +235,6 @@ class Renderer:
         # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         policy_names = ['neural', 'logic']
         weights = model.get_policy_weights()
-        # print(weights)
         for i, w_i in enumerate(weights):
             w_i = w_i.item()
             name = policy_names[i]

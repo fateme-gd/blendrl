@@ -33,7 +33,7 @@ import wandb
 OUT_PATH = Path("out_nudge/")
 IN_PATH = Path("in/")
 
-torch.set_num_threads(5)
+torch.set_num_threads(2)
 
 @dataclass
 class Args:
@@ -205,8 +205,8 @@ def main():
     episodic_game_rewards= torch.zeros((args.num_envs)).to(device) 
         
     agent._print()
-    if args.track:
-        wandb.watch([agent.logic_actor, agent.logic_critic, agent.visual_neural_actor, agent.blender]) #, log="all")
+    # if args.track:
+    #     wandb.watch([agent.logic_actor, agent.logic_critic, agent.visual_neural_actor, agent.blender]) #, log="all")
         
     rtpt.start()
     optimizer = optim.Adam(

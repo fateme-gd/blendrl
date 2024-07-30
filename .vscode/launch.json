@@ -49,12 +49,34 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "train nudge",
+            "name": "train nudge kangaroo",
             "type": "debugpy",
             "request": "launch",
             "program": "train_nudge.py",
             "pythonPath": "python",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--num_envs",
+                "4",
+                "--track"
+            ],
+        },
+        {
+            "name": "train neural ppo kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_neuralppo.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--num_envs",
+                "4",
+                "--track"
+            ],
         },
         {
             "name": "train kangaroo",
@@ -67,8 +89,7 @@
                 "--env-name",
                 "kangaroo",
                 "--num_envs",
-                "4",
-                "--track"
+                "2"
             ],
         },
         {

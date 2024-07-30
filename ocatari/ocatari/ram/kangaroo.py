@@ -44,6 +44,7 @@ class Player(GameObject):
         self.rgb = 223, 183, 85
         self.hud = False
         self.crashed = False
+        self.climbing = False
 
 
 class Child(GameObject):
@@ -91,7 +92,7 @@ class Ladder(GameObject):
     The ladders.
     """
 
-    def __init__(self, x=0, y=0, w=8, h=36):
+    def __init__(self, x=0, y=0, w=8, h=35):
         super(Ladder, self).__init__()
         self._xy = x, y
         self._prev_xy = x, y
@@ -235,23 +236,21 @@ def _remove_object(obj_cls: Type[GameObject], idx: int = 0):
     objects[obj_cls][idx] = None
 
 
-def _init_objects_kangaroo_ram(hud=True):
+def _init_objects_ram(hud=True):
     """
     (Re)Initialize the objects
     """
-    objects[Time][0] = Time()
     init_obj = [Player(), Child(), Monkey(), Monkey(), Monkey(), Monkey(),
                 FallingCoconut(), ThrownCoconut(), Fruit(), Fruit(), Fruit(), Bell(),
-                Platform(16, 172, w=128), Platform(16, 28, w=128), Time(), Life(), Life()]
+                Platform(16, 172, w=128), Platform(16, 28, w=128)]
     manage_platforms(0, init_obj)
-    global prev_level
-    prev_level = 0
     if hud:
-        init_obj.extend([Score()])
+        objects[Time][0] = Time()
+        init_obj.extend([Score(), Time(), Life(), Life()])
     return init_obj
 
 
-def _detect_objects_kangaroo_ram(objects_old, ram_state, hud=True):
+def _detect_objects_ram(objects_old, ram_state, hud=True):
     _update_objects(ram_state, hud)
     existing_objects = []
     object_categories = list(objects.values())
@@ -271,10 +270,9 @@ def _update_objects(ram_state, hud=True):
     _detect_fruits(ram_state)
     _detect_bell(ram_state)
     _detect_platforms(ram_state)
-    _detect_lives(ram_state)
-    _detect_time(ram_state)
-
     if hud:
+        _detect_lives(ram_state)
+        _detect_time(ram_state)
         _detect_score(ram_state)
 
 
@@ -283,7 +281,7 @@ def _detect_player(ram_state):
     y = ram_state[16] * 8 + 4
 
     orientation = Orientation.E if ram_state[18] in [8, 9, 28, 73, 74] else Orientation.W
-
+    climbing = ram_state[18] in [39, 47]
     crashed = ram_state[54] in [1, 128]
 
     # Determine height during jump animation or during duck
@@ -300,12 +298,26 @@ def _detect_player(ram_state):
     _update_object(Player, "wh", (8 , h))
     _update_object(Player, "orientation", orientation)
     _update_object(Player, "crashed", crashed)
+    _update_object(Player, "climbing", climbing)
 
 
 def _detect_child(ram_state):
-    x = ram_state[83] + 15
-    y = 12
-    _update_object(Child, "xy", (x, y))
+    # if ram_state[16] > 3 or (ram_state[83] != ram_state[17]):
+    if ram_state[16] > 3:
+        x = ram_state[83] + 15
+        y = 12
+        _update_object(Child, "xy", (x, y))
+    else:
+        fruits = 0
+        for i in range(3):
+            if ram_state[42+i]&128:
+                fruits +=1
+        if fruits == 0:
+            fruits = 1
+        if ram_state[68] == fruits:         
+            x = ram_state[83] + 15
+            y = 12
+            _update_object(Child, "xy", (x, y))
 
 
 def _detect_monkeys(ram_state):
@@ -360,18 +372,26 @@ def _detect_fruits(ram_state):
 
 
 def _detect_bell(ram_state):
-    x = ram_state[82] + 16
-    y = 36
-    _update_object(Bell, "xy", (x, y))
+    lvl = ram_state[36]
+    if ram_state[41] == 128:
+        _remove_object(Bell)
+    elif lvl < 3:
+        x = [93, 31, 130][lvl]
+        y = 36
+        _update_object(Bell, "xy", (x, y))
 
 
 def _detect_platforms(ram_state):
     # Only on level change
     current_level = ram_state[36]
-    global prev_level
-    if current_level != prev_level:
+    if objects[Platform][2] is None:
         manage_platforms(current_level, objects)
-    prev_level = current_level
+    elif current_level == 0 and objects[Platform][2].xy[1] != 76:
+        manage_platforms(current_level, objects)
+    elif current_level == 1 and objects[Platform][2].xy[1] != 124:
+        manage_platforms(current_level, objects)
+    elif current_level == 2 and objects[Platform][2].xy[1] != 140:
+        manage_platforms(current_level, objects)
 
 
 def _detect_lives(ram_state):
@@ -452,8 +472,8 @@ def manage_platforms(current_lvl_val, _):
     if current_lvl_val == 0:
         objects[Ladder] = [
             Ladder(132, 132),
-            Ladder(20, 84),
-            Ladder(132, 36),
+            Ladder(20, 85),
+            Ladder(132, 37),
             None,
             None,
             None,

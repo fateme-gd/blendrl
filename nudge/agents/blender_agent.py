@@ -104,6 +104,8 @@ class BlenderActor(nn.Module):
         batch_size = neural_state.size(0)
         logic_action_probs = self.to_action_distribution(self.logic_actor(logic_state))
         neural_action_probs = self.to_neural_action_distribution(neural_state)
+        self.logic_action_probs = logic_action_probs
+        self.neural_action_probs = neural_action_probs
         # action_probs size : B * N_actions
         batch_size = neural_state.size(0)
         # weights size: B * 2

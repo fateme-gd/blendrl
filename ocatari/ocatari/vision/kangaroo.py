@@ -88,7 +88,7 @@ class Time(GameObject):
         self.rgb = 160, 171, 79
 
 
-def _detect_objects_kangaroo(objects, obs, hud=True):
+def _detect_objects(objects, obs, hud=True):
     objects.clear()
 
     player = find_objects(obs, objects_colors["kangaroo"], min_distance=1, miny=28)
@@ -158,7 +158,6 @@ def _detect_objects_kangaroo(objects, obs, hud=True):
     
     objects.append(Platform(16, 172, w=128))  # base platform
     objects.append(Platform(16, 28, w=128))  # top platform
-    # if lvl_value < 23:
     objects.append(Ladder(132, 132))
     objects.append(Platform(16, 76, w=128))
     objects.append(Ladder(20, 85))

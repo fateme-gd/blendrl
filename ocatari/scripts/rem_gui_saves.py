@@ -17,7 +17,7 @@ identify the values that belong to a GameObject.
 """
 
 import pygame
-from ocatari.core import OCAtari, DEVICE, EasyDonkey
+from ocatari.core import OCAtari #, DEVICE, EasyDonkey
 import numpy as np
 import torch
 import cv2
@@ -34,9 +34,9 @@ class Renderer:
     clock: pygame.time.Clock
     env: gym.Env
 
-    def __init__(self, env_name: str):
+    def __init__(self, env_name: str, mode: str = "ram"):
         try:
-            self.env = OCAtari(env_name, mode="revised", hud=True, render_mode="rgb_array",
+            self.env = OCAtari(env_name, mode=mode, hud=True, render_mode="rgb_array",
                                 render_oc_overlay=True, frameskip=1)
             self.env_name = env_name
             # self.env = EasyDonkey(env_name, mode="revised", hud=True, render_mode="rgb_array",
@@ -128,7 +128,7 @@ class Renderer:
                 elif event.key == pygame.K_ESCAPE and self.active_cell_idx is not None:
                     self._unselect_active_cell()
 
-                elif (event.key,) in self.keys2actions.keys():  # env action
+                elif [x for x in self.keys2actions.keys() if event.key in x]: #(event.key,) in self.keys2actions.keys() or [x for x in self.keys2actions.keys() if event.key in x]:  # env action
                     self.current_keys_down.add(event.key)
 
                 elif pygame.K_0 <= event.key <= pygame.K_9:  # enter digit
@@ -145,13 +145,14 @@ class Renderer:
                     if self.active_cell_idx is not None:
                         self.current_active_cell_input = self.current_active_cell_input[:-1]
 
-                elif event.key == pygame.K_RETURN:
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_KP_ENTER:
                     if self.active_cell_idx is not None:
                         if len(self.current_active_cell_input) > 0:
                             new_cell_value = int(self.current_active_cell_input)
                             if new_cell_value < 256:
                                 self._set_ram_value_at(self.active_cell_idx, new_cell_value)
                         self._unselect_active_cell()
+                
                 elif event.key == pygame.K_g:
                     print(self.env.objects)
                     for obj in self.env.objects:
@@ -184,7 +185,7 @@ class Renderer:
                         print("No Save_State set")
 
             elif event.type == pygame.KEYUP:  # keyboard key released
-                if (event.key,) in self.keys2actions.keys():
+                if [x for x in self.keys2actions.keys() if event.key in x]: #(event.key,) in self.keys2actions.keys():
                     self.current_keys_down.remove(event.key)
 
     def _render(self, frame = None):
@@ -345,5 +346,5 @@ class Renderer:
 
 
 if __name__ == "__main__":
-    renderer = Renderer("Assault")
+    renderer = Renderer("Phoenix", "vision")
     renderer.run()

@@ -71,7 +71,7 @@ class Args:
     """the lambda for the general advantage estimation"""
     num_minibatches: int = 4
     """the number of mini-batches"""
-    update_epochs: int = 4
+    update_epochs: int = 10
     """the K epochs to update the policy"""
     norm_adv: bool = True
     """Toggles advantages normalization"""
@@ -130,7 +130,7 @@ class Args:
 def main():
         
     args = tyro.cli(Args)
-    rtpt = RTPT(name_initials='HS', experiment_name='BlendeRL', max_iterations=args.total_timesteps)
+    rtpt = RTPT(name_initials='HS', experiment_name='BlendeRL', max_iterations=int(args.total_timesteps / args.save_steps))
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -202,7 +202,7 @@ def main():
         blend_entropies = []
         
     # rewards actually used to train modes
-    episodic_game_rewards= torch.zeros((args.num_envs)).to(device) 
+    episodic_game_returns= torch.zeros((args.num_envs)).to(device) 
         
     agent._print()
     if args.track:
@@ -261,8 +261,6 @@ def main():
 
         for step in range(0, args.num_steps):
             # update rtpt
-            for _ in range(args.num_envs):
-                rtpt.step()
             global_step += args.num_envs
             obs[step] = next_obs
             # print(logic_obs.shape)
@@ -289,8 +287,8 @@ def main():
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_logic_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(next_logic_obs).to(device), torch.Tensor(next_done).to(device)
 
-            episodic_game_rewards += torch.tensor(reward).to(device).view(-1)
-            # print("episodic game reward: ", episodic_game_rewards.detach().cpu().numpy())
+            episodic_game_returns += torch.tensor(reward).to(device).view(-1)
+            # print("episodic game reward: ", episodic_game_returns.detach().cpu().numpy())
             # for r in reward:
             #     if r > 0.5:
             #         print("Reward:", reward)
@@ -308,19 +306,20 @@ def main():
                     # final_info = info['final_info']
                     if "episode" in info:
                         # print(f"global_step={global_step}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
-                        print(f"env={k}, global_step={global_step}, episodic_game_reward={np.round(episodic_game_rewards[k].detach().cpu().numpy(), 2)}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
+                        print(f"env={k}, global_step={global_step}, episodic_game_return={np.round(episodic_game_returns[k].detach().cpu().numpy(), 2)}, episodic_return={info['episode']['r']}, episodic_length={info['episode']['l']}")
                         writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
                         writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
                         episodic_returns.append(info["episode"]["r"])
                         episodic_lengths.append(info["episode"]["l"])
                         
                         # save the game reward and reset
-                        writer.add_scalar("charts/episodic_game_reward", episodic_game_rewards[k], global_step)
-                        episodic_game_rewards[k] = 0
+                        writer.add_scalar("charts/episodic_game_return", episodic_game_returns[k], global_step)
+                        episodic_game_returns[k] = 0
                         print("Environment {} has been reset".format(k))
               
             # Save the model      
             if global_step > save_step_bar:
+                rtpt.step()
                 checkpoint_path = checkpoint_dir / f"step_{save_step_bar}.pth"
                 agent.save(checkpoint_path, checkpoint_dir, [], [], [])
                 print("\nSaved model at:", checkpoint_path)

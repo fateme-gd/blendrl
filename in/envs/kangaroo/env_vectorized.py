@@ -12,7 +12,7 @@ from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
-
+import time
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -145,6 +145,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         logic_states = []
         neural_states = []
         
+        start = time.time()
         for i, env in enumerate(self.envs):
             action = actions[i]
             # make a step in the env
@@ -167,6 +168,9 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             truncations.append(truncation)
             dones.append(done)
             infos.append(info)
+        end = time.time()
+        diff = end - start
+        print("Time taken for step: ", diff)
             
         # observations = torch.stack(observations)
         return (torch.stack(logic_states), torch.stack(neural_states)), rewards, truncations, dones, infos

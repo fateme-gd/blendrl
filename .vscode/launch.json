@@ -93,6 +93,32 @@
             ],
         },
         {
+            "name": "play kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo"
+            ],
+        },
+        {
+            "name": "play seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_test"
+            ],
+        },
+        {
             "name": "test render multi envs",
             "type": "debugpy",
             "request": "launch",

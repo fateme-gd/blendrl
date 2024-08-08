@@ -41,7 +41,7 @@ class Renderer:
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
         self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=10, **env_kwargs)
-        self.env = self.model.env
+        # self.env = self.model.env
         self.env.reset()
         
         print(self.model._print())

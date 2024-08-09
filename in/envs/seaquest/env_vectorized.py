@@ -9,7 +9,7 @@ import gymnasium
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
-
+from hackatari.core import HackAtari
 from utils import load_cleanrl_envs
 
 
@@ -52,8 +52,10 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         super().__init__(mode)
         # set up multiple envs
         self.n_envs = n_envs
-        self.envs = [OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
-                           render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
+        self.envs = [HackAtari(env_name="ALE/Seaquest-v5", mode="ram", obs_mode="ori", \
+            modifs=[ ("disable_coconut"), ("random_init"), ("change_level0")],\
+            rewardfunc_path="in/envs/seaquest/blenderl_reward.py",\
+            render_mode=render_mode, render_oc_overlay=render_oc_overlay) for i in range(n_envs)]
         # apply wrapper to _env in OCAtari
         for i in range(n_envs):
             self.envs[i]._env = make_env(self.envs[i]._env)

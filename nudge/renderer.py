@@ -112,7 +112,7 @@ class Renderer:
                     # print("obs_nn: ", obs_nn.shape)
                     action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
-                    print("value:" , np.round(value.item(), 3))
+                    # print("value:" , np.round(value.item(), 3))
                     # state = (obs_nn, th.unsqueeze(obs, 0))
                     # action = self.model.select_action(state)  # update the model's internals
                     # action, _ = self.model.act(th.unsqueeze(obs, 0))

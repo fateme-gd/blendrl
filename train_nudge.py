@@ -130,7 +130,8 @@ class Args:
 def main():
         
     args = tyro.cli(Args)
-    rtpt = RTPT(name_initials='HS', experiment_name='NUDGE', max_iterations=args.total_timesteps)
+    # rtpt = RTPT(name_initials='HS', experiment_name='NUDGE', max_iterations=args.total_timesteps)
+    rtpt = RTPT(name_initials='HS', experiment_name='NUDGE', max_iterations=int(args.total_timesteps / args.save_steps))
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
@@ -257,9 +258,6 @@ def main():
             optimizer.param_groups[0]["lr"] = lrnow
 
         for step in range(0, args.num_steps):
-            # update rtpt
-            for _ in range(args.num_envs):
-                rtpt.step()
             global_step += args.num_envs
             obs[step] = next_obs
             # print(logic_obs.shape)
@@ -318,6 +316,7 @@ def main():
               
             # Save the model      
             if global_step > save_step_bar:
+                rtpt.step()
                 checkpoint_path = checkpoint_dir / f"step_{save_step_bar}.pth"
                 agent.save(checkpoint_path, checkpoint_dir, [], [], [])
                 print("\nSaved model at:", checkpoint_path)

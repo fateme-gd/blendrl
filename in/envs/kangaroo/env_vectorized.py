@@ -13,6 +13,10 @@ from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
+<<<<<<< HEAD
+=======
+import time
+>>>>>>> b2ca2b0411cdb2f35c96b39ba08affb576c77d8d
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -168,6 +172,9 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             truncations.append(truncation)
             dones.append(done)
             infos.append(info)
+        end = time.time()
+        diff = end - start
+        print("Time taken for step: ", diff)
             
         end = time.time()
         diff = end - start

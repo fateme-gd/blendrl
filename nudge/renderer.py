@@ -12,7 +12,7 @@ from nudge.utils import load_model, yellow
 from nudge.env import NudgeBaseEnv
 
 SCREENSHOTS_BASE_PATH = "out/screenshots/"
-PREDICATE_PROBS_COL_WIDTH = 500
+PREDICATE_PROBS_COL_WIDTH = 500 * 2
 FACT_PROBS_COL_WIDTH = 1000
 CELL_BACKGROUND_DEFAULT = np.array([40, 40, 40])
 CELL_BACKGROUND_HIGHLIGHT = np.array([40, 150, 255])
@@ -41,7 +41,7 @@ class Renderer:
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
         self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=10, **env_kwargs)
-        self.env = self.model.env
+        # self.env = self.model.env
         self.env.reset()
         
         print(self.model._print())
@@ -112,7 +112,7 @@ class Renderer:
                     # print("obs_nn: ", obs_nn.shape)
                     action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
-                    print("value:" , np.round(value.item(), 3))
+                    # print("value:" , np.round(value.item(), 3))
                     # state = (obs_nn, th.unsqueeze(obs, 0))
                     # action = self.model.select_action(state)  # update the model's internals
                     # action, _ = self.model.act(th.unsqueeze(obs, 0))
@@ -205,8 +205,10 @@ class Renderer:
     def _render(self):
         self.window.fill((20, 20, 20))  # clear the entire window
         self._render_policy_probs()
+        self._render_predicate_probs()
+        self._render_neural_probs()
         self._render_env()
-        self._render_facts()
+        # self._render_facts()
         # if self.render_predicate_probs:
         #     self._render_policy_probs()
         #     self._render_predicate_probs()
@@ -222,7 +224,7 @@ class Renderer:
         pygame.pixelcopy.array_to_surface(frame_surface, frame)
         self.window.blit(frame_surface, (0, 0))
 
-    def _render_policy_probs(self):
+    def _render_policy_probs_rows(self):
         anchor = (self.env_render_shape[0] + 10, 25)
 
         model = self.model
@@ -247,6 +249,43 @@ class Renderer:
             text_rect = text.get_rect()
             text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             self.window.blit(text, text_rect)
+            
+    def _render_policy_probs(self):
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        model = self.model
+        # nsfr = self.nsfr_reasoner
+        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
+        policy_names = ['neural', 'logic']
+        weights = model.get_policy_weights()
+        for i, w_i in enumerate(weights):
+            w_i = w_i.item()
+            name = policy_names[i]
+            # Render cell background
+            color = w_i * CELL_BACKGROUND_HIGHLIGHT_POLICY + (1 - w_i) * CELL_BACKGROUND_DEFAULT
+            # pygame.draw.rect(self.window, color, [
+            #     anchor[0] - 2,
+            #     anchor[1] - 2 + i * 35,
+            #     PREDICATE_PROBS_COL_WIDTH - 12,
+            #     28
+            # ])
+            pygame.draw.rect(self.window, color, [
+                anchor[0] - 2 + i * 500,
+                anchor[1] - 2,
+                (PREDICATE_PROBS_COL_WIDTH / 2 - 12) * w_i,
+                28
+            ])
+            # print(w_i, name)
+
+            text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
+            text_rect = text.get_rect()
+            # text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
+            if i == 0:
+                text_rect.topleft = (self.env_render_shape[0] + 10, 25) 
+            else:
+                text_rect.topleft = (self.env_render_shape[0] + 10 + i * 500, 25)
+            # text_rect.topleft = (self.env_render_shape[0] + 10  + i * 35, 25)
+            self.window.blit(text, text_rect)
         
     def _render_predicate_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
@@ -259,9 +298,34 @@ class Renderer:
             # Render cell background
             color = val * CELL_BACKGROUND_HIGHLIGHT + (1 - val) * CELL_BACKGROUND_DEFAULT
             pygame.draw.rect(self.window, color, [
+                anchor[0] - 2 + PREDICATE_PROBS_COL_WIDTH / 2,
+                anchor[1] - 2 + i * 35,
+                (PREDICATE_PROBS_COL_WIDTH /2  - 12) * val,
+                28
+            ])
+
+            text = self.font.render(str(f"{val:.3f} - {pred}"), True, "white", None)
+            text_rect = text.get_rect()
+            text_rect.topleft = (self.env_render_shape[0] + 10 + PREDICATE_PROBS_COL_WIDTH / 2, 25 + i * 35)
+            self.window.blit(text, text_rect)
+            
+            
+    def _render_neural_probs(self):
+        anchor = (self.env_render_shape[0] + 10, 25)
+
+        # nsfr = self.nsfr_reasoner
+        blender_actor = self.model.actor
+        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
+        action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
+        action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft", "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire", "downleftfire"]
+        for i, (pred, val) in enumerate(zip(action_names, action_vals)):
+            i += 2
+            # Render cell background
+            color = val * CELL_BACKGROUND_HIGHLIGHT + (1 - val) * CELL_BACKGROUND_DEFAULT
+            pygame.draw.rect(self.window, color, [
                 anchor[0] - 2,
                 anchor[1] - 2 + i * 35,
-                PREDICATE_PROBS_COL_WIDTH - 12,
+                (PREDICATE_PROBS_COL_WIDTH / 2  - 12) * val,
                 28
             ])
 
@@ -269,6 +333,7 @@ class Renderer:
             text_rect = text.get_rect()
             text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             self.window.blit(text, text_rect)
+
             
     def _render_facts(self, th=0.1):
         anchor = (self.env_render_shape[0] + 10, 25)

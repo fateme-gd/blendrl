@@ -114,8 +114,10 @@
             "args": [
                 "--env-name",
                 "seaquest",
+                "--fps",
+                "10",
                 "--agent-path",
-                "out/runs/seaquest_test"
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
             ],
         },
         {

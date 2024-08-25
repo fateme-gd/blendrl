@@ -293,6 +293,7 @@ class Renderer:
         # nsfr = self.nsfr_reasoner
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
+        print(self.model.actor.logic_action_probs)
         for i, (pred, val) in enumerate(pred_vals.items()):
             i += 2
             # Render cell background

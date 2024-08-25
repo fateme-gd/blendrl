@@ -1,6 +1,6 @@
 import os
 
-from neumann.facts_converter import FactsConverter
+from nsfr.facts_converter import FactsConverter
 from neumann.message_passing import MessagePassingModule
 from neumann.reasoning_graph import ReasoningGraphModule
 from nsfr.utils.logic import get_lang, get_blender_lang, build_infer_module
@@ -19,7 +19,8 @@ def get_neumann_model(env_name: str, rules: str, device: str, train=False):
     val_fn_path = f"in/envs/{env_name}/valuation.py"
     val_module = ValuationModule(val_fn_path, lang, device)
 
-    FC = FactsConverter(lang=lang, valuation_module=val_module, atoms=atoms, bk=bk, device=device)
+    # FC = FactsConverter(lang=lang, valuation_module=val_module, atoms=atoms, bk=bk, device=device)
+    FC = FactsConverter(lang=lang, valuation_module=val_module, device=device)
     prednames = []
     for clause in clauses:
         if clause.head.pred.name not in prednames:

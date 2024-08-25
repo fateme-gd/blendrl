@@ -46,6 +46,7 @@ class NEUMANN(nn.Module):
             self.init_ones_weights(clauses, device)
         self.device = device
         self.explain = explain
+        self.prednames = self.get_prednames()
         # self.print_program()
         
     def get_prednames(self):
@@ -54,6 +55,18 @@ class NEUMANN(nn.Module):
             if clause.head.pred.name not in prednames:
                 prednames.append(clause.head.pred.name)
         return prednames
+    
+    def get_predicate_valuation(self, predname: str, initial_valuation: bool = False):
+        valuation = self.V_0 if initial_valuation else self.V_T
+        target_index = get_index_by_predname(pred_str=predname, atoms=self.atoms)
+        value = valuation[:, target_index].item()
+        return value
+    
+    def get_fact_valuation(self, predname: str, initial_valuation: bool = False):
+        valuation = self.V_0 if initial_valuation else self.V_T
+        target_index = get_index_by_predname(pred_str=predname, atoms=self.atoms)
+        value = valuation[:, target_index].item()
+        return value
 
 
     def init_ones_weights(self, clauses, device):
@@ -163,7 +176,10 @@ class NEUMANN(nn.Module):
         """
         batch_size = x.size(0)
         
-        x = self.fc(x)
+        x = self.fc(x, self.atoms, self.bk)
+        
+        self.V_0 = x
+        # self.print_valuation_batch(self.V_0)
 
         # convert probabilistic facts to a node-feature matrix
         x = self._to_attribute_matrix(x.unsqueeze(-1))
@@ -179,6 +195,9 @@ class NEUMANN(nn.Module):
         # forwarding to message passing reasoning module
         y = self.mpm(x, clause_weights, self.rgm.edge_clause_index,
                      self.rgm.edge_type, atom_node_idxs, conj_node_idxs, batch_size, explain=self.explain)
+        
+        self.V_T = y[0][atom_node_idxs].unsqueeze(0)
+        # self.print_valuation_batch(self.V_T)
         return y
 
     def _get_idxs(self, batch_size):

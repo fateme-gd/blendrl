@@ -126,5 +126,39 @@
             "pythonPath": "python",
             "console": "integratedTerminal",
         },
+        {
+            "name": "train seaquest (neumann)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--num_envs",
+                "5",
+                "--reasoner",
+                "neumann",
+                "--joint-training"
+            ],
+        },
+        {
+            "name": "train seaquest (nsfr)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--num_envs",
+                "2",
+                "--reasoner",
+                "nsfr",
+                "--joint-training"
+            ],
+        },
     ]
 }

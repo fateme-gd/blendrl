@@ -14,6 +14,8 @@ from nudge.env_vectorized import VectorizedNudgeBaseEnv
 from functools import reduce
 from nsfr.utils.torch import softor
 
+from nsfr.nsfr import NSFReasoner
+from neumann.neumann import NEUMANN
  
 def to_proportion(dic):
     # Using reduce to get the sum of all values in the dictionary
@@ -188,13 +190,21 @@ def get_most_recent_checkpoint_step(checkpoint_dir):
 
 def print_program(agent, mode="softor"):
     """Print a summary of logic programs using continuous weights."""
+    # to adapt to be called from train and play scripts
     try:
-        nsfr = agent.policy.actor
+        actor = agent.policy.actor
     except AttributeError:
         try:
-            nsfr = agent.actor
+            actor = agent.actor
         except AttributeError:
-            nsfr = agent
+            actor = agent    
+    if isinstance(actor, NSFReasoner):
+        print_program_nsfr(actor, mode) 
+    elif isinstance(actor, NEUMANN):
+        print_program_neumann(actor, mode)
+        
+def print_program_nsfr(actor, mode):
+    nsfr = actor
     if mode == "argmax":
         C = nsfr.clauses
         Ws_softmaxed = torch.softmax(nsfr.im.W, 1)
@@ -208,3 +218,18 @@ def print_program(agent, mode="softor"):
         for i, c in enumerate(nsfr.clauses):
             print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), nsfr.clauses[i])
             
+
+def print_program_neumann(actor, mode):
+    neumann = actor
+    if mode == "argmax":
+        C = neumann.clauses
+        Ws_softmaxed = torch.softmax(neumann.clause_weights, 1)
+        for i, W_ in enumerate(Ws_softmaxed):
+            max_i = np.argmax(W_.detach().cpu().numpy())
+            print('C_' + str(i) + ': ',
+                  C[max_i], 'W_' + str(i) + ':', round(W_[max_i].detach().cpu().item(), 3))
+    elif mode == "softor":
+        W_softmaxed = torch.softmax(neumann.clause_weights, 1)
+        w = softor(W_softmaxed, dim=0)
+        for i, c in enumerate(neumann.clauses):
+            print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), neumann.clauses[i])

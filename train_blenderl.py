@@ -57,7 +57,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "Seaquest-v4"
     """the id of the environment"""
-    total_timesteps: int = 20000000
+    total_timesteps: int = 60000000
     """total timesteps of the experiments"""
     num_envs: int = 20
     """the number of parallel game environments"""
@@ -109,7 +109,7 @@ class Args:
     """the mode for the agent"""
     rules: str = "default"
     """the ruleset used in the agent"""
-    save_steps: int = 1000000
+    save_steps: int = 5000000
     """the number of steps to save models"""
     pretrained: bool = False
     """to use pretrained neural agent"""
@@ -125,6 +125,8 @@ class Args:
     """coefficient of the blend entropy"""
     recover: bool = False
     """recover the training from the last checkpoint"""
+    reasoner: str = "neumann"
+    """the reasoner used in the agent; nsfr or neumann"""
 
 
 def main():
@@ -177,7 +179,7 @@ def main():
 
     envs = VectorizedNudgeBaseEnv.from_name(args.env_name, n_envs=args.num_envs, mode=args.algorithm, seed=args.seed)#$, **env_kwargs)
 
-    agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, args.blend_function, device)
+    agent = BlenderActorCritic(envs, args.rules, args.actor_mode, args.blender_mode, args.blend_function, args.reasoner, device)
     if args.pretrained:
         # load neural agent weights
         agent.visual_neural_actor.load_state_dict(torch.load("models/neural_ppo_agent_Seaquest-v4.pth"))

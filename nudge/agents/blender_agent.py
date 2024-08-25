@@ -17,6 +17,7 @@ from torch.distributions.categorical import Categorical
 from torch.distributions import Categorical
 from nsfr.utils.common import load_module
 from nsfr.common import get_nsfr_model
+from neumann.common import get_neumann_model
 
 from utils import get_blender, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
 from nudge.utils import print_program
@@ -271,7 +272,7 @@ class BlenderActorCritic(nn.Module):
         device: device
         rng: random number generator
     """
-    def __init__(self, env, rules, actor_mode, blender_mode, blend_function, device, rng=None):
+    def __init__(self, env, rules, actor_mode, blender_mode, blend_function, reasoner, device, rng=None):
         super(BlenderActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
@@ -283,9 +284,14 @@ class BlenderActorCritic(nn.Module):
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
-        self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
+        if reasoner == "neumann":
+            self.logic_actor = get_neumann_model(env.name, rules, device=device, train=True)
+            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
+        elif reasoner == "nsfr":
+            self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
+            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
+        # self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.logic_critic = module.MLP(device=device, out_size=1, logic=True)
-        self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
         self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, blend_function, device=device)
         
         # the number of actual actions on the environment

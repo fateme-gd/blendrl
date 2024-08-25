@@ -30,7 +30,7 @@ def get_neumann_model(env_name: str, rules: str, device: str, train=False):
     # IM = build_infer_module(clauses, atoms, lang, m=m, infer_step=2, train=train, device=device)
     # Neuro-Symbolic Forward Reasoner
     soft_logic = SoftLogic()
-    MPM = MessagePassingModule(soft_logic=soft_logic, device=device, T=3)
+    MPM = MessagePassingModule(soft_logic=soft_logic, device=device, T=2)
     RGM = ReasoningGraphModule(clauses=clauses, facts=atoms, terms=lang.consts, lang=lang, max_term_depth=1, device=device)  
     neumann = NEUMANN(facts_converter=FC, message_passing_module=MPM, reasoning_graph_module=RGM, program_size=m, atoms=atoms, bk=bk, clauses=clauses, device=device, train=train)
     return neumann
@@ -59,7 +59,7 @@ def get_blender_neumann_model(env_name: str, rules: str, device: str, train=Fals
     # m = 5
     # Neuro-Symbolic Forward Reasoner
     soft_logic = SoftLogic()
-    MPM = MessagePassingModule(soft_logic=soft_logic, device=device, T=3)
+    MPM = MessagePassingModule(soft_logic=soft_logic, device=device, T=2)
     RGM = ReasoningGraphModule(clauses=clauses, facts=atoms, terms=lang.consts, lang=lang, max_term_depth=1, device=device)  
     neumann = NEUMANN(facts_converter=FC, message_passing_module=MPM, reasoning_graph_module=RGM, program_size=m, atoms=atoms, bk=bk, clauses=clauses, train=train)
     return neumann

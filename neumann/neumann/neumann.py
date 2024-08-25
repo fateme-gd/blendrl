@@ -196,7 +196,7 @@ class NEUMANN(nn.Module):
         y = self.mpm(x, clause_weights, self.rgm.edge_clause_index,
                      self.rgm.edge_type, atom_node_idxs, conj_node_idxs, batch_size, explain=self.explain)
         
-        self.V_T = y[0][atom_node_idxs].unsqueeze(0)
+        self.V_T = y[0].unsqueeze(0)
         # self.print_valuation_batch(self.V_T)
         return y
 

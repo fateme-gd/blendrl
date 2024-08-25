@@ -195,8 +195,9 @@ class BlenderActor(nn.Module):
         dist_values = []
         for i in range(len(env_action_names)):
             if i in self.env_action_id_to_action_pred_indices:
-                indices = torch.tensor(self.env_action_id_to_action_pred_indices[i], device=self.device)\
-                    .expand(batch_size, -1).to(self.device)
+                indices = torch.tensor(self.env_action_id_to_action_pred_indices[i])
+                indices = indices.expand(batch_size, -1)
+                indices = indices.to(self.device)
                 gathered = torch.gather(raw_action_logits, 1, indices)
                 # merged value for i-th action for samples in the batch
                 merged = softor(gathered, dim=1) # (batch_size, 1) 

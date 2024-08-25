@@ -1,4 +1,3 @@
-import time
 from typing import Sequence
 import torch
 from nudge.env_vectorized import VectorizedNudgeBaseEnv
@@ -13,10 +12,9 @@ from stable_baselines3.common.env_util import make_atari_env
 from stable_baselines3.common.vec_env import VecFrameStack
 
 from utils import load_cleanrl_envs
-<<<<<<< HEAD
-=======
+import joblib
 import time
->>>>>>> b2ca2b0411cdb2f35c96b39ba08affb576c77d8d
+from multiprocessing import Pool
 
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
@@ -40,7 +38,9 @@ def make_env(env):
     env = gym.wrappers.FrameStack(env, 4)
     return env
 
-
+def step_env(env, action):
+    return env.step(action)
+    
 class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
     """
     Vectorized NUDGE environment for Kangaroo.
@@ -149,7 +149,14 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
         logic_states = []
         neural_states = []
         
-        start = time.time()        
+        start  = time.time()
+        envs_actions = zip(self.envs, actions)
+        with Pool(processes=8) as pool:
+            pool.map(step_env, envs_actions)
+        # result = joblib.Parallel(n_jobs=10)(joblib.delayed(step_env)(env, action) for env, action in zip(self.envs, actions))
+        end = time.time()
+        print("Time taken for step: ", end-start)
+
         for i, env in enumerate(self.envs):
             action = actions[i]
             # make a step in the env
@@ -172,13 +179,6 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             truncations.append(truncation)
             dones.append(done)
             infos.append(info)
-        end = time.time()
-        diff = end - start
-        print("Time taken for step: ", diff)
-            
-        end = time.time()
-        diff = end - start
-        print("Time taken for step: ", diff)
             
         # observations = torch.stack(observations)
         return (torch.stack(logic_states), torch.stack(neural_states)), rewards, truncations, dones, infos

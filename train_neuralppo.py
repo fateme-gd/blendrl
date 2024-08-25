@@ -126,6 +126,8 @@ class Args:
     """coefficient of the blend entropy"""
     recover: bool = False
     """recover the training from the last checkpoint"""
+    reasoner: str = "nsfr"
+    """the reasoner used in the agent; nsfr or neumann"""
 
 
 def main():

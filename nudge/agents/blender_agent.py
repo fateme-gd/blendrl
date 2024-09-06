@@ -22,6 +22,16 @@ from neumann.common import get_neumann_model
 from utils import get_blender, extract_policy_probs, load_pretrained_stable_baseline_ppo, load_cleanrl_agent
 from nudge.utils import print_program
 
+from captum.attr import (
+    GradientShap,
+    DeepLift,
+    DeepLiftShap,
+    IntegratedGradients,
+    LayerConductance,
+    NeuronConductance,
+    NoiseTunnel,
+)
+
 class BlenderActor(nn.Module):
     """
     BlendeRL actor that combines neural and logic policies.
@@ -36,7 +46,7 @@ class BlenderActor(nn.Module):
         blend_function: blending function, one of ["softmax", "gumbel_softmax"]
         device: device
     """
-    def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, blend_function, device=None):
+    def __init__(self, env, neural_actor, logic_actor, blender, actor_mode, blender_mode, blend_function, device=None, explain=False):
         """
         Initialize a BlendeRL agent.
         Args:
@@ -58,6 +68,7 @@ class BlenderActor(nn.Module):
         self.blender_mode = blender_mode
         self.blend_function = blend_function
         self.device = device
+        self.explain = explain
         self.env_action_id_to_action_pred_indices = self._build_action_id_dict()
         
     def _build_action_id_dict(self):
@@ -87,9 +98,56 @@ class BlenderActor(nn.Module):
                 # pred1, pred2, ..., predn, dummy_pred
                 dummy_index = len(self.logic_actor.get_prednames())
                 env_action_id_to_action_pred_indices[i].append(dummy_index)
-
-                
         return env_action_id_to_action_pred_indices
+    
+    def get_explanation(self, neural_state, logic_state, action):
+        """
+        Get the explanation of the blending weights.
+        
+        Args:
+            neural_state: neural state
+            logic_state: logic state
+        """
+        neural_explanation = self.get_neural_explanation(neural_state, action)
+        logic_explanation = self.get_logic_explanation(logic_state, action)
+        # blend?? 
+        return neural_explanation, logic_explanation
+    
+    def get_neural_explanation(self, neural_state, action):
+        self.neural_actor.eval()
+        baseline = torch.zeros_like(neural_state).to(self.device)
+        ig = IntegratedGradients(self.neural_actor)
+        attributions, delta = ig.attribute(neural_state, baseline, target=action, return_convergence_delta=True)
+        return attributions
+    
+    def get_logic_explanation(self, logic_state, action):
+        self.logic_action_probs.max().backward()
+        print(self.logic_action_probs, self.logic_action_probs.max())
+        atom_attributes = self.logic_actor.dummy_zeros.grad
+        # normalize to [0, 1]
+        minimum = atom_attributes.min()
+        maximum = atom_attributes.max()
+        atom_attributes = (atom_attributes - minimum) / (maximum - minimum)
+        # atom_attributes = atom_attributes / atom_attributes.max()
+        print(atom_attributes)
+        self.logic_actor.print_valuations(min_value=0.5)
+        self.logic_actor.print_valuations_input(atom_attributes, min_value=0.5)
+        self.logic_actor.dummy_zeros.grad.zero_()
+        return atom_attributes
+    
+    def get_logic_explanation_IG(self, logic_state, action):
+        self.logic_actor.eval()
+        baseline = torch.zeros_like(logic_state).to(self.device)
+        # env action to predicate indices
+        # indices = self.env_action_id_to_action_pred_indices[action.item()]
+        # target_pred = self.logic_actor(logic_state)[indices].max().item()
+        logic_pred_probs = self.logic_actor(logic_state)
+        target_pred = torch.argmax(logic_pred_probs).item()
+        
+        ig = IntegratedGradients(self.logic_actor)
+        attributions, delta = ig.attribute(logic_state, baseline, target=target_pred, return_convergence_delta=True)
+        return attributions
+        
         
     def compute_action_probs_hybrid(self, neural_state, logic_state):
         """
@@ -273,7 +331,7 @@ class BlenderActorCritic(nn.Module):
         device: device
         rng: random number generator
     """
-    def __init__(self, env, rules, actor_mode, blender_mode, blend_function, reasoner, device, rng=None):
+    def __init__(self, env, rules, actor_mode, blender_mode, blend_function, reasoner, device, rng=None, explain=False):
         super(BlenderActorCritic, self).__init__()
         self.device = device
         self.rng = random.Random() if rng is None else rng
@@ -282,15 +340,16 @@ class BlenderActorCritic(nn.Module):
         self.blend_function = blend_function
         self.env = env
         self.rules = rules
+        self.explain = explain
         mlp_module_path = f"in/envs/{self.env.name}/mlp.py"
         module = load_module(mlp_module_path)
         self.visual_neural_actor = load_cleanrl_agent(pretrained=False, device=device)
         if reasoner == "neumann":
-            self.logic_actor = get_neumann_model(env.name, rules, device=device, train=True)
-            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
+            self.logic_actor = get_neumann_model(env.name, rules, device=device, train=True, explain=explain)
+            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True, explain=explain)
         elif reasoner == "nsfr":
-            self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
-            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True)
+            self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True, explain=explain)
+            self.blender = get_blender(env, rules, device, blender_mode=blender_mode, train=True, explain=explain)
         # self.logic_actor = get_nsfr_model(env.name, rules, device=device, train=True)
         self.logic_critic = module.MLP(device=device, out_size=1, logic=True)
         self.actor = BlenderActor(env, self.visual_neural_actor, self.logic_actor, self.blender, actor_mode, blender_mode, blend_function, device=device)
@@ -326,6 +385,19 @@ class BlenderActorCritic(nn.Module):
     def forward(self):
         raise NotImplementedError
     
+    def get_explanation(self, neural_state, logic_state):
+        """
+        Get the explanation of the blending weights.
+        
+        Args:
+            neural_state: neural state
+            logic_state: logic state
+        Returns:
+            explanation: explanation
+        """
+        self.actor.get_explanation(neural_state, logic_state)
+
+    
     def act(self, neural_state, logic_state, epsilon=0.0):
         """
         Compute an action using the actor. Used only by the play script (render.py).
@@ -352,7 +424,8 @@ class BlenderActorCritic(nn.Module):
                 action = action[0]
         # action = dist.sample()
         action_logprob = dist.log_prob(action)
-        return action.detach(), action_logprob.detach()
+        action_prob = torch.exp(action_logprob)
+        return action.detach(), action_prob #action_logprob.detach()
 
     def get_prednames(self):
         """

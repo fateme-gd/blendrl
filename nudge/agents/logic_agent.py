@@ -56,7 +56,7 @@ class NsfrActorCritic(nn.Module):
                 action = action[0]
         # action = dist.sample()
         action_logprob = dist.log_prob(action)
-        return action.detach(), action_logprob.detach()
+        return action.detach(), action #action_logprob.detach()
 
     def evaluate(self, neural_state, logic_state, action):
         action_probs = self.actor(logic_state)

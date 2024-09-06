@@ -25,7 +25,8 @@ def main(
         env_name=env_name,
         fps=fps,
         deterministic=False,
-        env_kwargs=dict(render_oc_overlay=True),
+        # env_kwargs=dict(render_oc_overlay=True),
+        env_kwargs=dict(render_oc_overlay=False),
         render_predicate_probs=True)
     renderer.run()
     

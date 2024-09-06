@@ -68,14 +68,20 @@ class CNNActor(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+    
+    def forward(self, x):
+        hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        return probs.probs
 
-def get_blender(env, blender_rules, device, train=True, blender_mode='logic', reasoner='nsfr'):
+def get_blender(env, blender_rules, device, train=True, blender_mode='logic', reasoner='nsfr', explain=False):
     assert blender_mode in ['logic', 'neural']
     if blender_mode == 'logic':
         if reasoner == 'nsfr':
-            return get_blender_nsfr_model(env.name, blender_rules, device, train=train)
+            return get_blender_nsfr_model(env.name, blender_rules, device, train=train, explain=explain)
         elif reasoner == 'neumann':
-            return get_blender_neumann_model(env.name, blender_rules, device, train=train)
+            return get_blender_neumann_model(env.name, blender_rules, device, train=train, explain=explain)
     if blender_mode == 'neural':
         net = NeuralBlenderActor()
         net.to(device)

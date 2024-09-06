@@ -6,7 +6,7 @@ from nsfr.nsfr import NSFReasoner
 from nsfr.valuation import ValuationModule
 
 
-def get_nsfr_model(env_name: str, rules: str, device: str, train=False):
+def get_nsfr_model(env_name: str, rules: str, device: str, train=False, explain=False):
     current_path = os.path.dirname(__file__)
     lark_path = os.path.join(current_path, 'lark/exp.lark')
     lang_base_path = f"in/envs/{env_name}/logic/"
@@ -25,11 +25,11 @@ def get_nsfr_model(env_name: str, rules: str, device: str, train=False):
     # m = 5
     IM = build_infer_module(clauses, atoms, lang, m=m, infer_step=2, train=train, device=device)
     # Neuro-Symbolic Forward Reasoner
-    NSFR = NSFReasoner(facts_converter=FC, infer_module=IM, atoms=atoms, bk=bk, clauses=clauses, train=train)
+    NSFR = NSFReasoner(facts_converter=FC, infer_module=IM, atoms=atoms, bk=bk, clauses=clauses, device=device, train=train, explain=explain)
     return NSFR
 
 
-def get_blender_nsfr_model(env_name: str, rules: str, device: str, train=False, mode='normal'):
+def get_blender_nsfr_model(env_name: str, rules: str, device: str, train=False, mode='normal', explain=False):
     current_path = os.path.dirname(__file__)
     lark_path = os.path.join(current_path, 'lark/exp.lark')
     lang_base_path = f"in/envs/{env_name}/logic/"
@@ -52,5 +52,5 @@ def get_blender_nsfr_model(env_name: str, rules: str, device: str, train=False, 
     # m = 5
     IM = build_infer_module(clauses, atoms, lang, m=m, infer_step=2, train=train, device=device)
     # Neuro-Symbolic Forward Reasoner
-    NSFR = NSFReasoner(facts_converter=FC, infer_module=IM, atoms=atoms, bk=bk, clauses=clauses, train=train)
+    NSFR = NSFReasoner(facts_converter=FC, infer_module=IM, atoms=atoms, bk=bk, clauses=clauses, device=device, train=train, explain=explain)
     return NSFR

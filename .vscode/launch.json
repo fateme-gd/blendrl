@@ -163,5 +163,22 @@
                 "--joint-training"
             ],
         },
+        {
+            "name": "train donkeykong (nsfr)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--num_envs",
+                "2",
+                "--reasoner",
+                "nsfr",
+                "--joint-training"
+            ],
+        },
     ]
 }

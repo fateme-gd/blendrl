@@ -124,6 +124,7 @@ class NudgeEnv(NudgeBaseEnv):
 
     def extract_logic_state(self, input_state):
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
+        self.bboxes = th.zeros((self.n_objects, 4), dtype=th.int32)
 
         obj_count = {k: 0 for k in MAX_ESSENTIAL_OBJECTS.keys()}
 
@@ -137,6 +138,7 @@ class NudgeEnv(NudgeBaseEnv):
                 orientation = obj.orientation.value if obj.orientation is not None else 0
                 state[idx] = th.tensor([1, *obj.center, orientation])
             obj_count[obj.category] += 1
+            self.bboxes[idx] = th.tensor(obj.xywh)
 
         return state
 

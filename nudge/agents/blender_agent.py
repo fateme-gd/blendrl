@@ -111,27 +111,38 @@ class BlenderActor(nn.Module):
         neural_explanation = self.get_neural_explanation(neural_state, action)
         logic_explanation = self.get_logic_explanation(logic_state, action)
         # blend?? 
-        return neural_explanation, logic_explanation
+        weights = self.to_blender_policy_distribution(neural_state, logic_state)[0]
+        # blended_explanation = weights[0, 0] * neural_explanation + weights[0, 1] * logic_explanation
+        return neural_explanation, logic_explanation, weights.detach().cpu().numpy()
     
     def get_neural_explanation(self, neural_state, action):
         self.neural_actor.eval()
         baseline = torch.zeros_like(neural_state).to(self.device)
         ig = IntegratedGradients(self.neural_actor)
         attributions, delta = ig.attribute(neural_state, baseline, target=action, return_convergence_delta=True)
+        minimum = attributions.min()
+        maximum = attributions.max()
+        attributions = (attributions - minimum) / (maximum - minimum)
         return attributions
     
     def get_logic_explanation(self, logic_state, action):
-        self.logic_action_probs.max().backward()
-        print(self.logic_action_probs, self.logic_action_probs.max())
+        # self.logic_action_probs.max().backward()
+        # self.logic_actor.V_T.max().backward()
+        self.raw_action_probs.max().backward()
+        # print(self.logic_action_probs, self.logic_action_probs.max())
         atom_attributes = self.logic_actor.dummy_zeros.grad
         # normalize to [0, 1]
         minimum = atom_attributes.min()
         maximum = atom_attributes.max()
         atom_attributes = (atom_attributes - minimum) / (maximum - minimum)
+        new_minimum = atom_attributes.min()
+        new_maximum = atom_attributes.max()
+        if atom_attributes.max() > 1.0:
+            pass
         # atom_attributes = atom_attributes / atom_attributes.max()
-        print(atom_attributes)
-        self.logic_actor.print_valuations(min_value=0.5)
-        self.logic_actor.print_valuations_input(atom_attributes, min_value=0.5)
+        # print(atom_attributes)
+        # self.logic_actor.print_valuations(min_value=0.5)
+        # self.logic_actor.print_valuations_input(atom_attributes, min_value=0.5)
         self.logic_actor.dummy_zeros.grad.zero_()
         return atom_attributes
     
@@ -249,6 +260,8 @@ class BlenderActor(nn.Module):
         env_action_names = list(self.env.pred2action.keys())        
         
         raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
+        # save raw_action_probs for explanations (attributions)
+        self.raw_action_probs = raw_action_probs
         raw_action_logits = torch.logit(raw_action_probs, eps=0.01)
         dist_values = []
         for i in range(len(env_action_names)):

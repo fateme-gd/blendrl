@@ -9,7 +9,7 @@ from nsfr.valuation import ValuationModule
 from neumann.soft_logic import SoftLogic
 
 
-def get_neumann_model(env_name: str, rules: str, device: str, train=False):
+def get_neumann_model(env_name: str, rules: str, device: str, train=True, explain=False):
     current_path = os.path.dirname(__file__)
     lark_path = os.path.join(current_path, 'lark/exp.lark')
     lang_base_path = f"in/envs/{env_name}/logic/"
@@ -32,7 +32,7 @@ def get_neumann_model(env_name: str, rules: str, device: str, train=False):
     soft_logic = SoftLogic()
     MPM = MessagePassingModule(soft_logic=soft_logic, device=device, T=2)
     RGM = ReasoningGraphModule(clauses=clauses, facts=atoms, terms=lang.consts, lang=lang, max_term_depth=1, device=device)  
-    neumann = NEUMANN(facts_converter=FC, message_passing_module=MPM, reasoning_graph_module=RGM, program_size=m, atoms=atoms, bk=bk, clauses=clauses, device=device, train=train)
+    neumann = NEUMANN(facts_converter=FC, message_passing_module=MPM, reasoning_graph_module=RGM, program_size=m, atoms=atoms, bk=bk, clauses=clauses, device=device, train=train, explain=explain)
     return neumann
 
 

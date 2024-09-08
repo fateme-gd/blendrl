@@ -186,7 +186,8 @@
                 "--env-name",
                 "seaquest",
                 "--agent-path",
-                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
             ],
         },
         {
@@ -199,6 +200,21 @@
             "args": [
                 "--env-name",
                 "kangaroo"
+            ],
+        },
+        {
+            "name": "explain seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
             ],
         },
     ]

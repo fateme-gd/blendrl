@@ -130,6 +130,8 @@ class NsfrActorCritic(nn.Module):
         env_action_names = list(self.env.pred2action.keys())        
         
         raw_action_probs = torch.cat([raw_action_probs, torch.zeros(batch_size, 1, device=self.device)], dim=1)
+        # save raw_action_probs for explanations (attributions)
+        self.raw_action_probs = raw_action_probs
         raw_action_logits = torch.logit(raw_action_probs, eps=0.01)
         dist_values = []
         for i in range(len(env_action_names)):

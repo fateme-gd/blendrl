@@ -135,7 +135,7 @@ class MessagePassingModule(torch.nn.Module):
         self.atom2conj = Atom2ConjConv(soft_logic, device)
         self.conj2atom = Conj2AtomConv(soft_logic, device)
 
-    def forward(self, data, clause_weights, edge_clause_index, edge_type, atom_node_idxs, conj_node_idxs, batch_size, explain=False):
+    def forward(self, data, clause_weights, edge_clause_index, edge_type, atom_node_idxs, conj_node_idxs, batch_size, dummy_zeros=None):
         """
         Args:
             data (torch_geometric.Data): A logic progam and probabilistic facts as a graph data.
@@ -169,14 +169,10 @@ class MessagePassingModule(torch.nn.Module):
 
 
         # dummy variable to compute inpute gradients
-        if explain:
-            #print(x[atom_node_idxs], x[atom_node_idxs].shape)
-            self.dummy_zeros = torch.zeros_like(x[atom_node_idxs], requires_grad=True).to(torch.float32).to(self.device)
-            self.dummy_zeros.requires_grad_()
-            self.dummy_zeros.retain_grad()
+        if not dummy_zeros is None:
             #print(self.dummy_zeros)
             # add dummy zeros to get input gradients
-            x[atom_node_idxs] = x[atom_node_idxs] + self.dummy_zeros
+            x[atom_node_idxs] = x[atom_node_idxs] + dummy_zeros
 
         # iterate message passing T times
         for t in range(self.T):

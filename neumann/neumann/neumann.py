@@ -48,6 +48,8 @@ class NEUMANN(nn.Module):
         self.explain = explain
         self.prednames = self.get_prednames()
         # self.print_program()
+        self.dummy_zeros = None
+
         
     def get_prednames(self):
         prednames = []
@@ -192,14 +194,23 @@ class NEUMANN(nn.Module):
 
         clause_weights = self._get_clause_weights()
 
+        if self.explain:
+            self.dummy_zeros = torch.zeros_like(x.x[atom_node_idxs], requires_grad=True).to(torch.float32).to(self.device)
+            self.dummy_zeros.requires_grad_()
+            self.dummy_zeros.retain_grad()
         # forwarding to message passing reasoning module
         y = self.mpm(x, clause_weights, self.rgm.edge_clause_index,
-                     self.rgm.edge_type, atom_node_idxs, conj_node_idxs, batch_size, explain=self.explain)
+                 self.rgm.edge_type, atom_node_idxs, conj_node_idxs, batch_size, dummy_zeros=self.dummy_zeros)
         
-        self.V_T = y[0].unsqueeze(0)
+        self.V_T = y
+        actions = self.get_predictions(self.V_T, prednames=self.prednames)
         # self.print_valuation_batch(self.V_T)
-        return y
-
+        return actions
+    
+    def get_predictions(self, V_T, prednames):
+        predicts = self.predict_multi(v=V_T, prednames=prednames)
+        return predicts
+    
     def _get_idxs(self, batch_size):
         """Increment the indicies for batch computation.
         """

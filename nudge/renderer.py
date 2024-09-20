@@ -61,8 +61,6 @@ class Renderer:
             self.keys2actions = {}
         self.current_keys_down = set()
 
-        # self.nsfr_reasoner = self.model.actor.logic_actor
-        # self.nsfr_reasoner.print_program()
         self.predicates = self.model.logic_actor.prednames
 
         self._init_pygame()
@@ -73,7 +71,6 @@ class Renderer:
         self.reset = False
         self.takeover = False
         
-        # self.video = vidmaker.Video("vidmaker.mp4", late_export=True)
 
     def _init_pygame(self):
         pygame.init()
@@ -99,35 +96,22 @@ class Renderer:
             self.reset = False
             self._handle_user_input()
             if not self.paused:
-                # self.video.update(pygame.surfarray.pixels3d(self.window), inverted=False) # THIS LINE
-
                 if not self.running:
                     break  # outer game loop
 
                 if self.takeover:  # human plays game manually
                     # assert False, "Unimplemented."
                     action = self._get_action()
-                    # self.model.act(th.unsqueeze(obs_nn, 0), th.unsqueeze(obs, 0))  # update the model's internals
                 else:  # AI plays the game
                     # print("obs_nn: ", obs_nn.shape)
                     action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
                     value = self.model.get_value(obs_nn, obs)
-                    # print("value:" , np.round(value.item(), 3))
-                    # state = (obs_nn, th.unsqueeze(obs, 0))
-                    # action = self.model.select_action(state)  # update the model's internals
-                    # action, _ = self.model.act(th.unsqueeze(obs, 0))
-                    # action = self.predicates[action.item()]
 
                 (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
                 if reward > 0:
                     print(f"Reward: {reward:.2f}")
-                # print("Reward: ", reward)
-                # print(infos)
                 new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
                 
-                # self.model.actor.logic_actor.print_valuations(self.model.actor.logic_actor.V_T)
-                # print(self.model.actor.logic_actor.V_T)
-                # self.model.actor.logic_actor.print_valuations()
 
                 self._render()
 
@@ -208,10 +192,6 @@ class Renderer:
         self._render_predicate_probs()
         self._render_neural_probs()
         self._render_env()
-        # self._render_facts()
-        # if self.render_predicate_probs:
-        #     self._render_policy_probs()
-        #     self._render_predicate_probs()
 
         pygame.display.flip()
         pygame.event.pump()
@@ -228,8 +208,6 @@ class Renderer:
         anchor = (self.env_render_shape[0] + 10, 25)
 
         model = self.model
-        # nsfr = self.nsfr_reasoner
-        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         policy_names = ['neural', 'logic']
         weights = model.get_policy_weights()
         for i, w_i in enumerate(weights):
@@ -254,8 +232,6 @@ class Renderer:
         anchor = (self.env_render_shape[0] + 10, 25)
 
         model = self.model
-        # nsfr = self.nsfr_reasoner
-        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         policy_names = ['neural', 'logic']
         weights = model.get_policy_weights()
         for i, w_i in enumerate(weights):
@@ -263,37 +239,25 @@ class Renderer:
             name = policy_names[i]
             # Render cell background
             color = w_i * CELL_BACKGROUND_HIGHLIGHT_POLICY + (1 - w_i) * CELL_BACKGROUND_DEFAULT
-            # pygame.draw.rect(self.window, color, [
-            #     anchor[0] - 2,
-            #     anchor[1] - 2 + i * 35,
-            #     PREDICATE_PROBS_COL_WIDTH - 12,
-            #     28
-            # ])
             pygame.draw.rect(self.window, color, [
                 anchor[0] - 2 + i * 500,
                 anchor[1] - 2,
                 (PREDICATE_PROBS_COL_WIDTH / 2 - 12) * w_i,
                 28
             ])
-            # print(w_i, name)
 
             text = self.font.render(str(f"{w_i:.3f} - {name}"), True, "white", None)
             text_rect = text.get_rect()
-            # text_rect.topleft = (self.env_render_shape[0] + 10, 25 + i * 35)
             if i == 0:
                 text_rect.topleft = (self.env_render_shape[0] + 10, 25) 
             else:
                 text_rect.topleft = (self.env_render_shape[0] + 10 + i * 500, 25)
-            # text_rect.topleft = (self.env_render_shape[0] + 10  + i * 35, 25)
             self.window.blit(text, text_rect)
         
     def _render_predicate_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
-
-        # nsfr = self.nsfr_reasoner
         nsfr = self.model.actor.logic_actor
         pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
-        # print(self.model.actor.logic_action_probs)
         for i, (pred, val) in enumerate(pred_vals.items()):
             i += 2
             # Render cell background
@@ -313,10 +277,7 @@ class Renderer:
             
     def _render_neural_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
-
-        # nsfr = self.nsfr_reasoner
         blender_actor = self.model.actor
-        # pred_vals = {pred: nsfr.get_predicate_valuation(pred, initial_valuation=False) for pred in nsfr.prednames}
         action_vals = blender_actor.neural_action_probs[0].detach().cpu().numpy()
         action_names = ["noop", "fire", "up", "right", "left", "down", "upright", "upleft", "downright", "downleft", "upfire", "rightfire", "leftfire", "downfire", "uprightfire", "upleftfire", "downrightfire", "downleftfire"]
         for i, (pred, val) in enumerate(zip(action_names, action_vals)):

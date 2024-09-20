@@ -14,14 +14,16 @@ class NSFReasoner(nn.Module):
         atoms (list(atom)): The set of ground atoms (facts).
     """
 
-    def __init__(self, facts_converter, infer_module, atoms, bk, clauses, train=False):
+    def __init__(self, facts_converter, infer_module, atoms, bk, clauses, device, train=False, explain=False):
         super().__init__()
         self.fc = facts_converter
         self.im = infer_module
         self.atoms = atoms
         self.bk = bk
         self.clauses = clauses
+        self.device = device
         self._train = train
+        self.explain = explain
         self.prednames = self.get_prednames()
         self.V_0 = []
         self.V_T = []
@@ -40,6 +42,15 @@ class NSFReasoner(nn.Module):
         zs = x
         # convert to the valuation tensor
         self.V_0 = self.fc(zs, self.atoms, self.bk)
+        
+        # dummy variable to compute inpute gradients
+        if self.explain:
+            self.dummy_zeros = torch.zeros_like(self.V_0, requires_grad=True).to(torch.float32).to(self.device)
+            self.dummy_zeros.requires_grad_()
+            self.dummy_zeros.retain_grad()
+            # add dummy zeros to get input gradients
+            self.V_0 = self.V_0 + self.dummy_zeros
+
         # perform T-step forward-chaining reasoning
         self.V_T = self.im(self.V_0)
         # self.print_valuations()
@@ -92,6 +103,20 @@ class NSFReasoner(nn.Module):
                          initial_valuation: bool = False):
         print('===== VALUATIONS =====')
         valuation = self.V_0 if initial_valuation else self.V_T
+        for b, batch in enumerate(valuation):
+            print(f"== BATCH {b} ==")
+            batch = batch.detach().cpu().numpy()
+            idxs = np.argsort(-batch)  # Sort by valuation value
+            for i in idxs:
+                value = batch[i]
+                if value >= min_value:
+                    atom = self.atoms[i]
+                    if predicate is None or predicate == atom.pred.name:
+                        print(f"{value:.3f} {atom}")
+                        
+    def print_valuations_input(self, V, predicate: str = None, min_value: float = 0):
+        print('===== VALUATIONS =====')
+        valuation = V
         for b, batch in enumerate(valuation):
             print(f"== BATCH {b} ==")
             batch = batch.detach().cpu().numpy()

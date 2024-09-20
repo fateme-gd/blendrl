@@ -78,13 +78,18 @@ def simulate_prob(extracted_states, num_of_objs, key_picked):
 
 def load_model(model_dir,
                env_kwargs_override: dict = None,
-               device=torch.device('cuda:0')):
+               steps = None,
+               device=torch.device('cuda:0'),
+               explain=False):
     from .agents.blender_agent import BlenderActorCritic
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
     checkpoint_dir = model_dir / "checkpoints"
-    most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    if steps == None:
+        most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    else:
+        most_recent_step = steps
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
     
     print("Loading model from", checkpoint_path)
@@ -117,7 +122,7 @@ def load_model(model_dir,
         except KeyError:
             reasoner = "nsfr"
         model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], \
-            blend_function=config["blend_function"], reasoner=reasoner, device=device).to(device)
+            blend_function=config["blend_function"], reasoner=reasoner, device=device, explain=explain).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:
@@ -130,13 +135,17 @@ def load_model(model_dir,
 
 def load_model_train(model_dir,
                      n_envs,
-               device=torch.device('cuda:0')):
+               device=torch.device('cuda:0'),
+               steps = None):
     from .agents.blender_agent import BlenderActorCritic
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
     checkpoint_dir = model_dir / "checkpoints"
-    most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    if steps == None:
+        most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    else:
+        most_recent_step = steps
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
     
     print("Loading model from", checkpoint_path)

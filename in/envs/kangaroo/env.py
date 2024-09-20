@@ -36,6 +36,20 @@ def make_env(env):
     env = gym.wrappers.FrameStack(env, 4)
     return env
 
+def make_env_ori(env):
+    env = gym.wrappers.RecordEpisodeStatistics(env)
+    env = gym.wrappers.AutoResetWrapper(env)
+    env = NoopResetEnv(env, noop_max=30)
+    env = MaxAndSkipEnv(env, skip=4)
+    env = EpisodicLifeEnv(env)
+    if "FIRE" in env.unwrapped.get_action_meanings():
+        env = FireResetEnv(env)
+    env = ClipRewardEnv(env)
+    # env = gym.wrappers.ResizeObservation(env, (84, 84))
+    # env = gym.wrappers.GrayScaleObservation(env)
+    env = gym.wrappers.FrameStack(env, 4)
+    return env
+
 
 class NudgeEnv(NudgeBaseEnv):
     """
@@ -76,8 +90,14 @@ class NudgeEnv(NudgeBaseEnv):
             rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         
+        # self.env_ori = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori",\
+        #     modifs=[("disable_coconut"), ("random_init")], #, ("change_level0")],\
+        #     rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
+        #     render_mode=render_mode, render_oc_overlay=render_oc_overlay)
+        
         # apply wrapper to _env
         self.env._env = make_env(self.env._env)
+        # self.env_ori._env = make_env_ori(self.env_ori._env)
         self.n_actions = 6
         self.n_raw_actions = 18
         self.n_objects = 49
@@ -91,7 +111,7 @@ class NudgeEnv(NudgeBaseEnv):
             self.obj_offsets[obj] = offset
             offset += max_count
         self.relevant_objects = set(MAX_ESSENTIAL_OBJECTS.keys())
-
+        
     def reset(self):
         """
         Reset the environment.
@@ -101,7 +121,9 @@ class NudgeEnv(NudgeBaseEnv):
             neural_state (torch.Tensor): Neural state of the environment.
         """
         raw_state, _ = self.env.reset(seed=self.seed)
+        # self.raw_state_ori, _ = self.env_ori.reset(seed=self.seed)
         state = self.env.objects
+        self.ocatari_state = state
         logic_state, neural_state =  self.extract_logic_state(state), self.extract_neural_state(raw_state)
         logic_state = logic_state.unsqueeze(0)
         return logic_state, neural_state
@@ -122,7 +144,9 @@ class NudgeEnv(NudgeBaseEnv):
             infos (dict): Additional information.
         """
         raw_state, reward, truncations, done, infos = self.env.step(action)
+        # self.raw_state_ori, _, _, _, _ = self.env_ori.step(action)
         state = self.env.objects
+        self.ocatari_state = state
         logic_state, neural_state = self.convert_state(state, raw_state)
         logic_state = logic_state.unsqueeze(0)
         return (logic_state, neural_state), reward, done, truncations, infos
@@ -151,6 +175,8 @@ class NudgeEnv(NudgeBaseEnv):
                     'Time': 1,}       
         """
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
+        # seve bboxes for exlanation rendering
+        self.bboxes = th.zeros((self.n_objects, 4), dtype=th.int32)
 
         obj_count = {k: 0 for k in MAX_ESSENTIAL_OBJECTS.keys()}
 
@@ -164,7 +190,13 @@ class NudgeEnv(NudgeBaseEnv):
                 orientation = obj.orientation.value if obj.orientation is not None else 0
                 state[idx] = th.tensor([1, *obj.center, orientation])
             obj_count[obj.category] += 1
+            self.bboxes[idx] = th.tensor(obj.xywh)
         return state
+    
+    # def object_id_to_ocatari_object(self, object_id):
+    #     # obj28 -> Ladder at (x, y), (h, w)
+    #     passa
+        
 
     def extract_neural_state(self, raw_input_state):
         """

@@ -32,7 +32,8 @@ class Renderer:
                  fps: int = None,
                  deterministic=True,
                  env_kwargs: dict = None,
-                 render_predicate_probs=True):
+                 render_predicate_probs=True,
+                 seed=0):
 
         self.fps = fps
         self.deterministic = deterministic
@@ -40,7 +41,7 @@ class Renderer:
 
         # Load model and environment
         self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
-        self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=10, **env_kwargs)
+        self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=seed, **env_kwargs)
         # self.env = self.model.env
         self.env.reset()
         

@@ -122,6 +122,23 @@
             ],
         },
         {
+            "name": "play donkeykong",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--fps",
+                "10",
+                "--agent-path",
+                "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
+            ],
+        },
+        {
             "name": "test render multi envs",
             "type": "debugpy",
             "request": "launch",
@@ -160,6 +177,23 @@
                 "2",
                 "--reasoner",
                 "nsfr",
+                "--joint-training"
+            ],
+        },
+        {
+            "name": "train donkeykong (neumann)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--num_envs",
+                "2",
+                "--reasoner",
+                "neumann",
                 "--joint-training"
             ],
         },

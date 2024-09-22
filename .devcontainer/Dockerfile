@@ -17,7 +17,6 @@ WORKDIR  /Workspace
 #    && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update
-RUN apt-get -y install qt5-default
 
 RUN pip install --upgrade pip
 
@@ -33,3 +32,6 @@ RUN pip install gym
 RUN pip install protobuf==3.20.*
 
 RUN pip install ale-py==0.7.4
+
+RUN pip install torch==1.12.0+cu116 torchvision==0.13.0+cu116 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install pyg_lib torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-1.12.0+cu116.html

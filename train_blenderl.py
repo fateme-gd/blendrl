@@ -102,7 +102,7 @@ class Args:
     algorithm: str = "blender"
     """the algorithm used in the agent"""
     blender_mode: str = "logic"
-    """the mode for the blend"""
+    """the mode for the blend (logic or neural)"""
     blend_function: str = "softmax"
     """the function to blend the neural and logic agents: softmax or gumbel_softmax"""
     actor_mode: str = "hybrid"

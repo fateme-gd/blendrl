@@ -1,7 +1,10 @@
 tyro
-stable_baselines3
-torch>=1.12.0
-pygame
-vidmaker
-pyyaml
+gymnasium
 hackatari
+torch-geometric 
+networkx
+captum
+rtpt
+wandb
+ocatari
+stable_baselines==2.3.2

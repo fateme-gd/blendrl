@@ -171,11 +171,11 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             infos.append(info)
         end = time.time()
         diff = end - start
-        print("Time taken for step: ", diff)
+        # print("Time taken for step: ", diff)
             
         end = time.time()
         diff = end - start
-        print("Time taken for step: ", diff)
+        # print("Time taken for step: ", diff)
             
         # observations = torch.stack(observations)
         return (torch.stack(logic_states), torch.stack(neural_states)), rewards, truncations, dones, infos

@@ -43,11 +43,16 @@ If you want to use NUDGE within other projects, you can install NUDGE locally as
     python setup.py develop
     ```
 
-### Optional: Threefish and Loot Environments
-In case you want to use the Threefish or the Loot environment, you also need to install QT-5 via
-```bash
-apt-get install qt5-default
-```
+### Ohter dependencies
+1. Install packages by `pip install -r requirements.txt` 
+
+2. PyG and torch-scatter for neumann
+Install PyG and torch-scatter packages for neumann reasoner. See the [installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html). These should be consistent in terms of ther versions, e.g.
+    ```
+    pip install torch==1.12.0+cu116 torchvision==0.13.0+cu116 -f https://download.pytorch.org/whl/torch_stable.html
+    pip install torch_geometric
+    pip install pyg_lib torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-1.12.0+cu116.html
+    ```
 
 ### Playing
 TODO

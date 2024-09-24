@@ -109,8 +109,8 @@ class Renderer:
                     value = self.model.get_value(obs_nn, obs)
 
                 (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
-                if reward > 0:
-                    print(f"Reward: {reward:.2f}")
+                # if reward > 0:
+                    # print(f"Reward: {reward:.2f}")
                 new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
                 
 

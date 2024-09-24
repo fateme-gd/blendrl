@@ -135,6 +135,7 @@
                 "10",
                 "--agent-path",
                 "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
+                // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
                 // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
             ],
         },

@@ -158,16 +158,17 @@ def same_level_bell(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
     return _same_level(player, obj)
 
 def same_level_ladder(player: th.Tensor, obj: th.Tensor) -> th.Tensor:
-    obj1_y = player[..., 2] # + 10
+    obj1_y = player[..., 2] + 8
     obj2_y = obj[..., 2]
-    eps = 4
+    z = 5 # floor thickness
+    # eps = 12
     
-    is_1st_level = th.logical_and(th.logical_and(176 - eps < obj1_y, obj1_y < 193), th.logical_and(176 < obj2_y, obj2_y < 193))
-    is_2nd_level = th.logical_and(th.logical_and(148 - eps < obj1_y, obj1_y < 165), th.logical_and(148 < obj2_y, obj2_y < 165))
-    is_3rd_level = th.logical_and(th.logical_and(120 - eps < obj1_y,  obj1_y < 137), th.logical_and(120 < obj2_y, obj2_y < 137))
-    is_4th_level = th.logical_and(th.logical_and(92 - eps < obj1_y,  obj1_y < 109), th.logical_and(92 < obj2_y, obj2_y < 109))
-    is_5th_level = th.logical_and(th.logical_and(64 - eps < obj1_y,  obj1_y < 81), th.logical_and(64 < obj2_y, obj2_y < 81))
-    is_6th_level = th.logical_and(th.logical_and(40 - eps < obj1_y,  obj1_y < 57), th.logical_and(40 < obj2_y, obj2_y < 57))
+    is_1st_level = th.logical_and(th.logical_and(176 - 5 < obj1_y, obj1_y < 193 + 8), th.logical_and(176 < obj2_y, obj2_y < 193))
+    is_2nd_level = th.logical_and(th.logical_and(148 - 5 < obj1_y, obj1_y < 165 + 8), th.logical_and(148 < obj2_y, obj2_y < 165))
+    is_3rd_level = th.logical_and(th.logical_and(120 - 5 < obj1_y,  obj1_y < 137 + 8), th.logical_and(120 < obj2_y, obj2_y < 137))
+    is_4th_level = th.logical_and(th.logical_and(92 - 5 < obj1_y,  obj1_y < 109 + 8), th.logical_and(92 < obj2_y, obj2_y < 109))
+    is_5th_level = th.logical_and(th.logical_and(64 - 5 < obj1_y,  obj1_y < 81 + 8), th.logical_and(64 < obj2_y, obj2_y < 81))
+    is_6th_level = th.logical_and(th.logical_and(40 - 5 < obj1_y,  obj1_y < 57 + 8), th.logical_and(40 < obj2_y, obj2_y < 57))
     
     is_same_level_1 = th.logical_or(is_3rd_level, th.logical_or(is_2nd_level, is_1st_level))
     is_same_level_2 = th.logical_or(is_4th_level, th.logical_or(is_5th_level, is_6th_level))

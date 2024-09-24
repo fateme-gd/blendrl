@@ -14,6 +14,7 @@ def reward_function(self) -> float:
     # if player.y == 4:
         # reward = 0.2
     # BUG ↓ with multi envs, rewards collected repeatedly
+    return self.org_reward / 1000.0
     if self.org_reward > 0 and player.y == 157 and player.prev_y < 55:
         # print("x, y: , ", player.x, player.y, ", reward: ", 10)
         return 10

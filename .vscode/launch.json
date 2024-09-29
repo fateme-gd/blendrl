@@ -103,7 +103,12 @@
                 "--env-name",
                 "kangaroo",
                 "--agent-path",
+<<<<<<< HEAD
                 "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
+=======
+                "plot/runs/blendrl/kangaroo_best"
+                // "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
+>>>>>>> f44089aaa772cef64bda51f238cdb0095ac2dc90
             ],
         },
         {
@@ -136,16 +141,8 @@
                 "--fps",
                 "10",
                 "--agent-path",
-<<<<<<< HEAD
                 "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_2"
-                // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_0"
-                // "out/runs/ddonkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_2"
-=======
-                "out/runs/donkeykong_0"
-                // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
->>>>>>> 911c432a9e37433f77b0f9fe4249beee90fdc5c9
-                // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
-                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
+                // "out/runs/donkeykong_0"
             ],
         },
         {
@@ -288,6 +285,25 @@
                 "seaquest",
                 "--agent-path",
                 "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "evaluate kangaroo neuralppo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "evaluate.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--model",
+                "neuralppo",
+                "--agent-path",
+                "out_neuralppo/runs/kangaroo__lr_0.00025_gamma_0.99_numenvs_512_steps_128_0"
+                // "plot/runs/neuralppo/kangaroo_0"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
                 // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
             ],
         },

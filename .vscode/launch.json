@@ -136,9 +136,14 @@
                 "--fps",
                 "10",
                 "--agent-path",
+<<<<<<< HEAD
                 "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_2"
                 // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_0"
                 // "out/runs/ddonkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_2"
+=======
+                "out/runs/donkeykong_0"
+                // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
+>>>>>>> 911c432a9e37433f77b0f9fe4249beee90fdc5c9
                 // "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_2_steps_128_pretrained_False_joint_True_0"
                 // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
             ],
@@ -246,6 +251,36 @@
             "type": "debugpy",
             "request": "launch",
             "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "explain donkeykong",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--agent-path",
+                "out/runs/donkeykong_0"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "evaluate seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "evaluate.py",
             "pythonPath": "python",
             "console": "integratedTerminal",
             "args": [

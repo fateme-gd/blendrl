@@ -432,8 +432,8 @@ class BlenderActorCritic(nn.Module):
             action = dist.sample()
         else:
             dist = Categorical(action_probs)
-            # action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
-            action = dist.sample()
+            action = (action_probs[0] == max(action_probs[0])).nonzero(as_tuple=True)[0].squeeze(0).to(self.device)
+            # action = dist.sample()
             # print(action)
             if torch.numel(action) > 1:
                 action = action[0]

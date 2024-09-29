@@ -141,6 +141,7 @@ class NudgeEnv(NudgeBaseEnv):
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
 
         obj_count = {k: 0 for k in MAX_ESSENTIAL_OBJECTS.keys()}
+        self.bboxes = th.zeros((self.n_objects, 4), dtype=th.int32)
 
         for obj in input_state:
             if obj.category not in self.relevant_objects:
@@ -152,6 +153,7 @@ class NudgeEnv(NudgeBaseEnv):
                 orientation = obj.orientation.value if obj.orientation is not None else 0
                 state[idx] = th.tensor([1, *obj.center, orientation])
             obj_count[obj.category] += 1
+            self.bboxes[idx] = th.tensor(obj.xywh)
         return state
 
     def extract_neural_state(self, raw_input_state):

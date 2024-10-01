@@ -130,12 +130,10 @@ class Args:
 def main():
         
     args = tyro.cli(Args)
-    # rtpt = RTPT(name_initials='HS', experiment_name='NUDGE', max_iterations=args.total_timesteps)
     rtpt = RTPT(name_initials='HS', experiment_name='NUDGE', max_iterations=int(args.total_timesteps / args.save_steps))
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    # model_description = "actor_{}_blend_{}".format(args.actor_mode, args.blend_function)
     model_description = "{}".format(args.blend_function)
     learning_description = f"lr_{args.learning_rate}_llr_{args.logic_learning_rate}_gamma_{args.gamma}_numenvs_{args.num_envs}_steps_{args.num_steps}"
     run_name = f"{args.env_name}_{model_description}_{learning_description}_{args.seed}"
@@ -159,9 +157,6 @@ def main():
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(image_dir, exist_ok=True)
     os.makedirs(writer_dir, exist_ok=True)
-    # os.makedirs("tensorboard", exist_ok=True)
-    
-    # writer = SummaryWriter(f"runs/{run_name}")
     writer = SummaryWriter(writer_dir)
     writer.add_text(
         "hyperparameters",

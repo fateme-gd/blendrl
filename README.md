@@ -1,19 +1,18 @@
-# BlendeRL: Blending Neural and Logic Policies
-<!-- This is the implementation of **Neurally gUided Differentiable loGic policiEs (NUDGE)**, a framework for logic RL agents based on differentiable forward reasoning with first-order logic (FOL).
-![](docs/LogicRL.png) -->
+# BlendRL: A Framework for Merging Symbolic and Neural Policies
 
-<img src="assets/blenderl.png" alt="drawing" height="200"/>
+<!-- <img src="assets/blenderl.png" alt="drawing" height="200"/> -->
 
 ## Quickstart
 Install `nsfr` and `nudge`.
 
 Training script:
 ```
-python train_blenderl.py --track --pretrained --num-steps=512 
+python train_blenderl.py --env-name seaquest --joint-training --num-steps 128 --num-envs 5 --gamma 0.99
 ```
-- --track: activate wandb tracking
-- --pretrained: use a pretrained neural agent
+- --joint-training: train neural and logic modules jointly
 - --num-steps: the number of steps for policy rollout
+- --num-envs: the number of environments to train agents
+- --gamma: the discount factor for future rewards
 <!--
 1. Install all requirements via
     ```bash
@@ -25,6 +24,7 @@ Play script:
 ```
 python play_gui.py
 ```
+Note that a checkpoint is required to run the play script.
 ## How to Use
 ### Hyperparameters
 The hyperparameters are configured inside `in/config/default.yaml` which is loaded as default. You can specify a different configuration by providing the corresponding YAML file path as an argument, e.g., `python train.py in/config/my_config.yaml`. A description of all hyperparameters can be found in `train.py`.
@@ -63,18 +63,6 @@ TODO
 python3 play.py -s 0 -alg ppo -m getout -env getout  
 ```
 
-
-## Environments and their Variants
-### Getout
-* `getout` contains key, door and one enemy.  
-* `getoutplus` has one more enemy.
-### Threefish
-* `threefish` contains one bigger fish and one smaller fish.
-* `threefishcolor` contains one red fish and one green fish. agent need to avoid red fish and eat green fish.
-### Loot
-* `loot` contains 2 pairs of key and door.  
-* `lootcolor` contains 2 pairs of key and door with different color than in loot.  
-* `lootplus` contains 3 pairs of key and door.
 
 
 ## How to Set up New Environments

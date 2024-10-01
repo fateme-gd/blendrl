@@ -11,6 +11,12 @@ def full_divers(objs: th.Tensor) -> th.Tensor:
     result = num_collected_divers == 6
     return bool_to_probs(result)
 
+def not_full_divers(objs: th.Tensor) -> th.Tensor:
+    divers_vs = objs[:, -6:]
+    num_collected_divers = th.sum(divers_vs[:,:,0], dim=1)
+    result = num_collected_divers < 6
+    return bool_to_probs(result)
+
 def many_enemies(objs: th.Tensor) -> th.Tensor:
     # enemies_vs = objs[:, ]
     enemies_vs = th.cat([objs[:, 5:30], objs[:, 31:35]], dim=1)

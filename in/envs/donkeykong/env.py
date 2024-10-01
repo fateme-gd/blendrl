@@ -72,7 +72,7 @@ class NudgeEnv(NudgeBaseEnv):
         """
         super().__init__(mode)
         self.env = HackAtari(env_name="ALE/DonkeyKong-v5", mode="ram", obs_mode="ori",\
-            modifs=[("random_start"), ("change_level0")],\
+            modifs=[("no_barrel"), ("change_level0")],\
             rewardfunc_path="in/envs/donkeykong/blenderl_reward.py",\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         

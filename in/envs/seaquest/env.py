@@ -60,7 +60,8 @@ class NudgeEnv(NudgeBaseEnv):
         super().__init__(mode)
         # self.env = OCAtari(env_name="Seaquest-v4", mode="ram", obs_mode="ori",
         #                    render_mode=render_mode, render_oc_overlay=render_oc_overlay)
-        self.env = HackAtari(env_name="ALE/Seaquest-v5", mode="ram", #modifs=[("disable_enemies")],
+        self.env = HackAtari(env_name="ALE/Seaquest-v5", mode="ram", 
+                             modifs=[("disable_enemies")],
                             rewardfunc_path="in/envs/seaquest/blenderl_reward.py",
                             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         # for learning script from cleanrl

@@ -1,0 +1,311 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "play",
+            "type": "debugpy",
+            "request": "launch",
+            "pythonPath": "python",
+            "program": "play_gui.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "cleanrl train",
+            "type": "debugpy",
+            "request": "launch",
+            "pythonPath": "python",
+            "program": "cleanrl/cleanrl/ppo_atari.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-id",
+                "Seaquest-v4"
+            ],
+        },
+        {
+            "name": "ppo_atari on deirl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ppo_atari.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "train blenderl",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "train nudge kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_nudge.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--num_envs",
+                "4",
+                "--track"
+            ],
+        },
+        {
+            "name": "train neural ppo kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_neuralppo.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--num_envs",
+                "4",
+                "--track"
+            ],
+        },
+        {
+            "name": "train kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--num_envs",
+                "2"
+            ],
+        },
+        {
+            "name": "play kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo",
+                "--agent-path",
+<<<<<<< HEAD
+                "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
+=======
+                "plot/runs/blendrl/kangaroo_best"
+                // "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
+>>>>>>> f44089aaa772cef64bda51f238cdb0095ac2dc90
+            ],
+        },
+        {
+            "name": "play seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--fps",
+                "10",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_150_steps_128_pretrained_False_joint_True_151"
+            ],
+        },
+        {
+            "name": "play donkeykong",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--fps",
+                "10",
+                "--agent-path",
+                "out/runs/donkeykong_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_2"
+                // "out/runs/donkeykong_0"
+            ],
+        },
+        {
+            "name": "test render multi envs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "play_gui_vectorized.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "train seaquest (neumann)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--num_envs",
+                "5",
+                "--reasoner",
+                "neumann",
+                "--joint-training"
+            ],
+        },
+        {
+            "name": "train seaquest (nsfr)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--num_envs",
+                "2",
+                "--reasoner",
+                "nsfr",
+                "--joint-training"
+            ],
+        },
+        {
+            "name": "train donkeykong (neumann)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "train_blenderl.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--num_envs",
+                "2",
+                "--reasoner",
+                "neumann",
+                "--joint-training"
+            ],
+        },
+        {
+            "name": "record kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "record_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo"
+            ],
+        },
+        {
+            "name": "record seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "record_gui.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "explain kangaroo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "kangaroo"
+            ],
+        },
+        {
+            "name": "explain seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "explain donkeykong",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "explain.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "donkeykong",
+                "--agent-path",
+                "out/runs/donkeykong_0"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "evaluate seaquest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "evaluate.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--agent-path",
+                "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+        {
+            "name": "evaluate kangaroo neuralppo",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "evaluate.py",
+            "pythonPath": "python",
+            "console": "integratedTerminal",
+            "args": [
+                "--env-name",
+                "seaquest",
+                "--model",
+                "neuralppo",
+                "--agent-path",
+                "out_neuralppo/runs/kangaroo__lr_0.00025_gamma_0.99_numenvs_512_steps_128_0"
+                // "plot/runs/neuralppo/kangaroo_0"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1025"
+                // "out/runs/seaquest_softmax_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.01_numenvs_512_steps_128_pretrained_False_joint_True_1024"
+            ],
+        },
+    ]
+}

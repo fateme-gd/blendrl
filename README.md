@@ -1,5 +1,8 @@
 # BlendRL: A Framework for Merging Symbolic and Neural Policies
+[Hikaru Shindo](https://www.hikarushindo.com/), [Quentin Delfosse](https://ml-research.github.io/people/qdelfosse/index.html), [Devendra Singh Dhami](https://sites.google.com/view/devendradhami), [Kristian Kersting](https://ml-research.github.io/people/kkersting/index.html)
 
+
+*We propose a framework that jointly learns symbolic and neural policies for reinforcement learning.*
 <!-- <img src="assets/blenderl.png" alt="drawing" height="200"/> -->
 <img src="assets/kangaroo_agent.gif" width=800>
 

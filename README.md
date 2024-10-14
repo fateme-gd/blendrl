@@ -1,7 +1,7 @@
 # BlendRL: A Framework for Merging Symbolic and Neural Policies
 
 <!-- <img src="assets/blenderl.png" alt="drawing" height="200"/> -->
-<img src="assets/kangaroo.gif" width=600>
+<img src="assets/kangaroo_agent.gif" width=600>
 
 ## Quickstart
 Install `nsfr` and `nudge`.

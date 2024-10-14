@@ -86,8 +86,9 @@ class NudgeEnv(NudgeBaseEnv):
         """
         super().__init__(mode)
         self.env = HackAtari(env_name="ALE/Kangaroo-v5", mode="ram", obs_mode="ori",\
-            # modifs=[("disable_coconut"), ("random_init"), ("change_level0")],\
-            modifs=[("disable_coconut"), ("change_level0"), ("random_init"), ("invert_ladders")],\
+            modifs=[("disable_coconut"), ("random_init"), ("change_level0")],\
+            # modifs=[("disable_coconut"),  ("change_level0")],\
+            # modifs=[("disable_coconut"), ("change_level0"), ("invert_ladders")],\
             rewardfunc_path="in/envs/kangaroo/blenderl_reward.py",\
             render_mode=render_mode, render_oc_overlay=render_oc_overlay)
         

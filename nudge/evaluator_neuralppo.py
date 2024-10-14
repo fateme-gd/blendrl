@@ -8,7 +8,7 @@ import torch as th
 
 from nudge.agents.logic_agent import NsfrActorCritic
 from nudge.agents.neural_agent import ActorCritic
-from nudge.utils import load_model, yellow
+from nudge.utils import load_neuralppo_model, yellow
 from nudge.env import NudgeBaseEnv
 
 SCREENSHOTS_BASE_PATH = "out/screenshots/"
@@ -44,16 +44,19 @@ class EvaluatorNeuralPPO:
         self.episodes = episodes
         self.agent_path = agent_path
         self.env_name = env_name
+        
+        self.device = torch.device(device)
 
         # Load model and environment
-        self.model = load_model(agent_path, env_kwargs_override=env_kwargs, device=device)
+
+        self.model = load_neuralppo_model(agent_path, env_kwargs_override=env_kwargs, device=device)
         self.env = NudgeBaseEnv.from_name(env_name, mode='deictic', seed=seed, **env_kwargs)
         # self.env = self.model.env
         self.env.reset()
         
-        print(self.model._print())
+        # print(self.model._print())
 
-        print(f"Playing '{self.model.env.name}' with {'' if deterministic else 'non-'}deterministic policy.")
+        # print(f"Playing '{self.model.env.name}' with {'' if deterministic else 'non-'}deterministic policy.")
 
         if fps is None:
             fps = 15
@@ -68,7 +71,7 @@ class EvaluatorNeuralPPO:
             self.keys2actions = {}
         self.current_keys_down = set()
 
-        self.predicates = self.model.logic_actor.prednames
+        # self.predicates = self.model.logic_actor.prednames
 
         # self._init_pygame()
 
@@ -96,8 +99,8 @@ class EvaluatorNeuralPPO:
         ret = 0
 
         obs, obs_nn = self.env.reset()
-        obs_nn = th.tensor(obs_nn, device=self.model.device) 
-        obs = obs.to(self.model.device)
+        obs_nn = th.tensor(obs_nn, device=self.device) 
+        obs = obs.to(self.device)
         # print(obs_nn.shape)
 
         episode_count = 0
@@ -116,8 +119,6 @@ class EvaluatorNeuralPPO:
                     action = self._get_action()
                 else:  # AI plays the game
                     # print("obs_nn: ", obs_nn.shape)
-                    action, logprob = self.model.act(obs_nn, obs)  # update the model's internals
-                    value = self.model.get_value(obs_nn, obs)
                     # get blend entropy
                     # _, newlogprob, entropy, blend_entropy, newvalue = self.model.get_action_and_value(obs_nn, obs, action)
                     action, logprob, _, value = self.model.get_action_and_value(obs_nn)
@@ -126,7 +127,7 @@ class EvaluatorNeuralPPO:
                 (new_obs, new_obs_nn), reward, done, terminations, infos = self.env.step(action, is_mapped=self.takeover)
                 if reward > 0:
                     print(f"Reward: {reward:.2f}")
-                new_obs_nn = th.tensor(new_obs_nn, device=self.model.device) 
+                new_obs_nn = th.tensor(new_obs_nn, device=self.device) 
                 
 
                 # self._render()
@@ -140,9 +141,9 @@ class EvaluatorNeuralPPO:
                     # self._render()
 
                 obs = new_obs
-                obs = obs.to(self.model.device)
+                obs = obs.to(self.device)
                 obs_nn = new_obs_nn
-                obs_nn = obs_nn.to(self.model.device)  
+                obs_nn = obs_nn.to(self.device)  
                 length += 1
 
                 if terminations:

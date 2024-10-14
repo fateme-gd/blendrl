@@ -22,7 +22,7 @@ def main(
     fps: int = 5,
     episodes: int = 2,
     model: str = 'blendrl',
-    device: str = 'cpu'
+    device: str = 'cuda:0'
     ) -> None:
     assert model in ['blendrl', 'neuralppo'], "Invalid model type; choose from ['blendrl', 'neuralppo']"
     if model == 'blendrl':
@@ -36,7 +36,6 @@ def main(
             # env_kwargs=dict(render_oc_overlay=True),
             env_kwargs=dict(render_oc_overlay=False),
             render_predicate_probs=True)
-        evaluator.run()
     elif model == 'neuralppo':
         evaluator = EvaluatorNeuralPPO(\
             episodes=episodes,
@@ -48,6 +47,7 @@ def main(
             # env_kwargs=dict(render_oc_overlay=True),
             env_kwargs=dict(render_oc_overlay=False),
             render_predicate_probs=True)
+    evaluator.run()
     
     
 if __name__ == "__main__":

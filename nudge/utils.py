@@ -247,3 +247,45 @@ def print_program_neumann(actor, mode):
         w = softor(W_softmaxed, dim=0)
         for i, c in enumerate(neumann.clauses):
             print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), neumann.clauses[i])
+            
+            
+            
+def load_neuralppo_model(model_dir,
+               env_kwargs_override: dict = None,
+               steps = None,
+               device=torch.device('cuda:0'),
+               explain=False):
+    # Determine all relevant paths
+    model_dir = Path(model_dir)
+    config_path = model_dir / "config.yaml"
+    checkpoint_dir = model_dir / "checkpoints"
+    if steps == None:
+        most_recent_step = get_most_recent_checkpoint_step(checkpoint_dir)
+    else:
+        most_recent_step = steps
+    checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
+    
+    print("Loading model from", checkpoint_path)
+
+    with open(config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.Loader)
+
+    algorithm = config["algorithm"]
+    environment = config["env_name"]
+    # env_kwargs = config["env_kwargs"]
+    # env_kwargs.update(env_kwargs_override)
+    # env_kwargs = dict(render_oc_overlay=True)
+    env_kwargs = {}
+
+    # Setup the environment
+    env = NudgeBaseEnv.from_name(environment, mode=algorithm, **env_kwargs)
+    # model = ActorCritic(env).to(device)
+    from utils import CNNActor
+    model = CNNActor(n_actions=18) #, device=device, verbose=1)
+    # Load the model weights
+    with open(checkpoint_path, "rb") as f:
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
+    # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
+    # print(model.logic_actor.im.W)
+
+    return model

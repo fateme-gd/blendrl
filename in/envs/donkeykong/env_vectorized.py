@@ -151,15 +151,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             action = actions[i]
             # make a step in the env
             obs, reward, truncation, done, info = env.step(action)
-            # Check with multiple envs
-            # for obj in env.objects:
-            #     if "Player" in str(obj):
-            #         print("Env_{}".format(i), obj)
-            # if reward > 0.5:
-            #     print("Reward: ", reward) 
-            # lazy frame to tensor
             raw_state = torch.tensor(obs).float()
-            # get logic and neural state
             state = env.objects
             logic_state, neural_state = self.convert_state(state, raw_state)
             logic_states.append(logic_state)
@@ -169,15 +161,7 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             truncations.append(truncation)
             dones.append(done)
             infos.append(info)
-        # end = time.time()
-        # diff = end - start
-        # print("Time taken for step: ", diff)
             
-        # end = time.time()
-        # diff = end - start
-        # print("Time taken for step: ", diff)
-            
-        # observations = torch.stack(observations)
         return (torch.stack(logic_states), torch.stack(neural_states)), rewards, truncations, dones, infos
             
 
@@ -188,21 +172,6 @@ class VectorizedNudgeEnv(VectorizedNudgeBaseEnv):
             input_state (list): List of objects in the environment.
         Returns:
             torch.Tensor: Logic state.
-        
-        Comment:
-            in ocatari/ram/donkeykong.py :
-                MAX_ESSENTIAL_OBJECTS = {
-                    'Player': 1,
-                    'Child': 1,
-                    'Fruit': 3,
-                    'Bell': 1,
-                    'Platform': 20,
-                    'Ladder': 6,
-                    'Monkey': 4,
-                    'FallingCoconut': 1,
-                    'ThrownCoconut': 3,
-                    'Life': 8,
-                    'Time': 1,}       
         """
         state = th.zeros((self.n_objects, self.n_features), dtype=th.int32)
 

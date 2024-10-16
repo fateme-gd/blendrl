@@ -5,6 +5,7 @@
 
 *We propose a framework that jointly learns symbolic and neural policies for reinforcement learning.*
 <!-- <img src="assets/blenderl.png" alt="drawing" height="200"/> -->
+<img src="assets/seaquest_agent.gif" width=800>
 <img src="assets/kangaroo_agent.gif" width=800>
 
 ## Quickstart

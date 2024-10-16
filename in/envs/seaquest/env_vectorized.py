@@ -1,6 +1,6 @@
 from typing import Sequence
 import torch
-from nudge.env_vectorized import VectorizedNudgeBaseEnv
+from blendrl.env_vectorized import VectorizedNudgeBaseEnv
 from ocatari.core import OCAtari
 import numpy as np
 import torch as th

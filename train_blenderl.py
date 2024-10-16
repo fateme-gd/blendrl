@@ -13,8 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 # added
-from nudge.agents.blender_agent import BlenderActorCritic
-from nudge.env_vectorized import VectorizedNudgeBaseEnv
+from blendrl.agents.blender_agent import BlenderActorCritic
+from blendrl.env_vectorized import VectorizedNudgeBaseEnv
 from nudge.utils import save_hyperparams
 import os
 import sys

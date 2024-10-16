@@ -1,7 +1,7 @@
 import time
 from typing import Sequence
 import torch
-from nudge.env_vectorized import VectorizedNudgeBaseEnv
+from blendrl.env_vectorized import VectorizedNudgeBaseEnv
 from ocatari.core import OCAtari
 from hackatari.core import HackAtari
 import numpy as np

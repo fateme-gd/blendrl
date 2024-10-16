@@ -13,9 +13,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 # added
-from nudge.agents.blender_agent import NsfrActorCritic
+from agents.blender_agent import NsfrActorCritic
 from cleanrl.cleanrl.ppo_atari import AgentListEnvs
-from nudge.env_vectorized import VectorizedNudgeBaseEnv
+from blendrl.env_vectorized import VectorizedNudgeBaseEnv
 from nudge.utils import save_hyperparams
 import os
 import sys

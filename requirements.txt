@@ -7,4 +7,4 @@ captum
 rtpt
 wandb
 ocatari
-stable_baselines==2.3.2
+stable_baselines3==2.3.2

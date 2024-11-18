@@ -28,7 +28,7 @@ python train_blenderl.py --env-name seaquest --joint-training --num-steps 128 --
 -->
 Play script:
 ```
-python play_gui.py
+python play_gui.py --env-name kangaroo --agent-path out/runs/kangaroo_demo
 ```
 Note that a checkpoint is required to run the play script.
 ## How to Use

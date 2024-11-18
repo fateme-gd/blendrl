@@ -103,12 +103,9 @@
                 "--env-name",
                 "kangaroo",
                 "--agent-path",
-<<<<<<< HEAD
-                "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
-=======
-                "plot/runs/blendrl/kangaroo_best"
+                "out/runs/kangaroo_demo"
+                // "plot/runs/blendrl/kangaroo_best"
                 // "out/runs/kangaroo_softmax_blender_logic_lr_0.00025_llr_0.00025_blr_0.00025_gamma_0.99_bentcoef_0.0_numenvs_512_steps_128_pretrained_False_joint_True_514"
->>>>>>> f44089aaa772cef64bda51f238cdb0095ac2dc90
             ],
         },
         {

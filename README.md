@@ -60,16 +60,6 @@ Install PyG and torch-scatter packages for neumann reasoner. See the [installati
     pip install pyg_lib torch_scatter torch_sparse -f https://data.pyg.org/whl/torch-1.12.0+cu116.html
     ```
 
-### Playing
-TODO
-
-**Example to play with a trained ppo agent**
-
-```
-python3 play.py -s 0 -alg ppo -m getout -env getout  
-```
-
-
 
 ## How to Set up New Environments
 You add a new environment inside `in/envs/[new_env_name]/`. There, you need to define a `NudgeEnv` class that wraps the original environment in order to do

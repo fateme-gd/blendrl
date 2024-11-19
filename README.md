@@ -26,9 +26,16 @@ python train_blenderl.py --env-name seaquest --joint-training --num-steps 128 --
     ```
 2. On project level, simply run `python train.py` to start a new training run.
 -->
+Download the trained agents:
+```
+wget https://hessenbox.tu-darmstadt.de/dl/fiCNznPuWkALH8JaCJWHeeAV/models.zip
+unzip models.zip
+rm models.zip
+```
 Play script:
 ```
-python play_gui.py --env-name kangaroo --agent-path out/runs/kangaroo_demo
+python play_gui.py --env-name kangaroo --agent-path models/kangaroo_demo
+python play_gui.py --env-name seaquest --agent-path models/seaquest_demo
 ```
 Note that a checkpoint is required to run the play script.
 ## How to Use

@@ -16,35 +16,32 @@ from nsfr.utils.torch import softor
 
 from nsfr.nsfr import NSFReasoner
 from neumann.neumann import NEUMANN
-
-
+ 
 def to_proportion(dic):
     # Using reduce to get the sum of all values in the dictionary
     temp = reduce(lambda x, y: x + y, dic.values())
-
+ 
     # Using dictionary comprehension to divide each value by the sum of all values
     res = {k: v / temp for k, v in dic.items()}
     return res
-
 
 def get_action_stats(env, actions):
     env_actions = env.pred2action.keys()
     frequency_dic = {}
     for action in env_actions:
         frequency_dic[action] = 0
-
+        
     for i, action in enumerate(actions):
         frequency_dic[action] += 1
-
+    
     action_proportion = to_proportion(frequency_dic)
     return action_proportion
-
 
 def save_hyperparams(args, save_path, print_summary: bool = False):
     hyperparams = {}
     for key, value in vars(args).items():
-        hyperparams[key] = value  # local_scope[param]
-    with open(save_path, "w") as f:
+        hyperparams[key] = value #local_scope[param]
+    with open(save_path, 'w') as f:
         yaml.dump(hyperparams, f)
     if print_summary:
         print("Hyperparameter Summary:")
@@ -79,15 +76,12 @@ def simulate_prob(extracted_states, num_of_objs, key_picked):
     return extracted_states
 
 
-def load_model(
-    model_dir,
-    env_kwargs_override: dict = None,
-    steps=None,
-    device=torch.device("cuda:0"),
-    explain=False,
-):
+def load_model(model_dir,
+               env_kwargs_override: dict = None,
+               steps = None,
+               device=torch.device('cuda:0'),
+               explain=False):
     from blendrl.agents.blender_agent import BlenderActorCritic
-
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
@@ -97,7 +91,7 @@ def load_model(
     else:
         most_recent_step = steps
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
-
+    
     print("Loading model from", checkpoint_path)
 
     # Load model's configuration
@@ -118,40 +112,32 @@ def load_model(
 
     print("Loading...")
     # Initialize the model
-    if algorithm == "ppo":
+    if algorithm == 'ppo':
         model = ActorCritic(env).to(device)
-    elif algorithm == "logic":
+    elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
     else:
         try:
             reasoner = config["reasoner"]
         except KeyError:
             reasoner = "nsfr"
-        model = BlenderActorCritic(
-            env,
-            rules=rules,
-            actor_mode=config["actor_mode"],
-            blender_mode=config["blender_mode"],
-            blend_function=config["blend_function"],
-            reasoner=reasoner,
-            device=device,
-            explain=explain,
-        ).to(device)
+        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], \
+            blend_function=config["blend_function"], reasoner=reasoner, device=device, explain=explain).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:
-        model.load_state_dict(
-            state_dict=torch.load(f, map_location=torch.device("cpu"))
-        )
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
     # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
     # print(model.logic_actor.im.W)
 
     return model
 
 
-def load_model_train(model_dir, n_envs, device=torch.device("cuda:0"), steps=None):
+def load_model_train(model_dir,
+                     n_envs,
+               device=torch.device('cuda:0'),
+               steps = None):
     from blendrl.agents.blender_agent import BlenderActorCritic
-
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
@@ -161,7 +147,7 @@ def load_model_train(model_dir, n_envs, device=torch.device("cuda:0"), steps=Non
     else:
         most_recent_step = steps
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
-
+    
     print("Loading model from", checkpoint_path)
 
     # Load model's configuration
@@ -178,25 +164,16 @@ def load_model_train(model_dir, n_envs, device=torch.device("cuda:0"), steps=Non
 
     print("Loading...")
     # Initialize the model
-    if algorithm == "ppo":
+    if algorithm == 'ppo':
         model = ActorCritic(env).to(device)
-    elif algorithm == "logic":
+    elif algorithm == 'logic':
         model = NsfrActorCritic(env, device=device, rules=rules).to(device)
     else:
-        model = BlenderActorCritic(
-            env,
-            rules=rules,
-            actor_mode=config["actor_mode"],
-            blender_mode=config["blender_mode"],
-            blend_function=config["blend_function"],
-            device=device,
-        ).to(device)
+        model = BlenderActorCritic(env, rules=rules, actor_mode=config["actor_mode"], blender_mode=config["blender_mode"], blend_function=config["blend_function"], device=device).to(device)
 
     # Load the model weights
     with open(checkpoint_path, "rb") as f:
-        model.load_state_dict(
-            state_dict=torch.load(f, map_location=torch.device("cpu"))
-        )
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
     # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
     # print(model.logic_actor.im.W)
 
@@ -234,13 +211,12 @@ def print_program(agent, mode="softor"):
         try:
             actor = agent.actor
         except AttributeError:
-            actor = agent
+            actor = agent    
     if isinstance(actor, NSFReasoner):
-        print_program_nsfr(actor, mode)
+        print_program_nsfr(actor, mode) 
     elif isinstance(actor, NEUMANN):
         print_program_neumann(actor, mode)
-
-
+        
 def print_program_nsfr(actor, mode):
     nsfr = actor
     if mode == "argmax":
@@ -248,22 +224,14 @@ def print_program_nsfr(actor, mode):
         Ws_softmaxed = torch.softmax(nsfr.im.W, 1)
         for i, W_ in enumerate(Ws_softmaxed):
             max_i = np.argmax(W_.detach().cpu().numpy())
-            print(
-                "C_" + str(i) + ": ",
-                C[max_i],
-                "W_" + str(i) + ":",
-                round(W_[max_i].detach().cpu().item(), 3),
-            )
+            print('C_' + str(i) + ': ',
+                  C[max_i], 'W_' + str(i) + ':', round(W_[max_i].detach().cpu().item(), 3))
     elif mode == "softor":
         W_softmaxed = torch.softmax(nsfr.im.W, 1)
         w = softor(W_softmaxed, dim=0)
         for i, c in enumerate(nsfr.clauses):
-            print(
-                "C_" + str(i) + ": ",
-                np.round(w[i].detach().cpu().item(), 2),
-                nsfr.clauses[i],
-            )
-
+            print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), nsfr.clauses[i])
+            
 
 def print_program_neumann(actor, mode):
     neumann = actor
@@ -272,30 +240,21 @@ def print_program_neumann(actor, mode):
         Ws_softmaxed = torch.softmax(neumann.clause_weights, 1)
         for i, W_ in enumerate(Ws_softmaxed):
             max_i = np.argmax(W_.detach().cpu().numpy())
-            print(
-                "C_" + str(i) + ": ",
-                C[max_i],
-                "W_" + str(i) + ":",
-                round(W_[max_i].detach().cpu().item(), 3),
-            )
+            print('C_' + str(i) + ': ',
+                  C[max_i], 'W_' + str(i) + ':', round(W_[max_i].detach().cpu().item(), 3))
     elif mode == "softor":
         W_softmaxed = torch.softmax(neumann.clause_weights, 1)
         w = softor(W_softmaxed, dim=0)
         for i, c in enumerate(neumann.clauses):
-            print(
-                "C_" + str(i) + ": ",
-                np.round(w[i].detach().cpu().item(), 2),
-                neumann.clauses[i],
-            )
-
-
-def load_neuralppo_model(
-    model_dir,
-    env_kwargs_override: dict = None,
-    steps=None,
-    device=torch.device("cuda:0"),
-    explain=False,
-):
+            print('C_' + str(i) + ': ', np.round(w[i].detach().cpu().item(), 2), neumann.clauses[i])
+            
+            
+            
+def load_neuralppo_model(model_dir,
+               env_kwargs_override: dict = None,
+               steps = None,
+               device=torch.device('cuda:0'),
+               explain=False):
     # Determine all relevant paths
     model_dir = Path(model_dir)
     config_path = model_dir / "config.yaml"
@@ -305,7 +264,7 @@ def load_neuralppo_model(
     else:
         most_recent_step = steps
     checkpoint_path = checkpoint_dir / f"step_{most_recent_step}.pth"
-
+    
     print("Loading model from", checkpoint_path)
 
     with open(config_path, "r") as f:
@@ -322,13 +281,10 @@ def load_neuralppo_model(
     env = NudgeBaseEnv.from_name(environment, mode=algorithm, **env_kwargs)
     # model = ActorCritic(env).to(device)
     from utils import CNNActor
-
-    model = CNNActor(n_actions=18)  # , device=device, verbose=1)
+    model = CNNActor(n_actions=18) #, device=device, verbose=1)
     # Load the model weights
     with open(checkpoint_path, "rb") as f:
-        model.load_state_dict(
-            state_dict=torch.load(f, map_location=torch.device("cpu"))
-        )
+        model.load_state_dict(state_dict=torch.load(f, map_location=torch.device('cpu')))
     # model.logic_actor.im.W = torch.nn.Parameter(model.logic_actor.im.init_identity_weights(device))
     # print(model.logic_actor.im.W)
 

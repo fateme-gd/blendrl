@@ -181,10 +181,10 @@ class BlenderActor(nn.Module):
         # weights size: B * 2
         weights = self.to_blender_policy_distribution(neural_state, logic_state)
         # modify the weights (Seaquet no enemies)
-        weights_new = torch.zeros_like(weights).to(self.device)
-        weights_new[:,0] += 0.05
-        weights_new[:,1] += 0.95
-        weights = weights_new
+        # weights_new = torch.zeros_like(weights).to(self.device)
+        # weights_new[:,0] += 0.05
+        # weights_new[:,1] += 0.95
+        # weights = weights_new
         # save weights: w1 and w2
         self.w_policy = weights[0]
         n_actions = neural_action_probs.size(1)

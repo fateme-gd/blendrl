@@ -4,7 +4,7 @@ from blendrl.env_vectorized import VectorizedNudgeBaseEnv
 from ocatari.core import OCAtari
 import numpy as np
 import torch as th
-from ocatari.ram.seaquest import MAX_ESSENTIAL_OBJECTS
+from ocatari.ram.seaquest import MAX_NB_OBJECTS as MAX_ESSENTIAL_OBJECTS
 import gymnasium
 import gymnasium as gym
 from stable_baselines3.common.env_util import make_atari_env

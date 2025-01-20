@@ -14,8 +14,7 @@ def main(
     device: str = "cuda:0",
 ) -> None:
     """
-    Ablation evaluation script. This script evaluates the performance of the blendrl agent with different actor by tracking
-    the performance of the agent with different actor modes (hybrid, logic, neural) and different blending modes (logic, neural).
+    Evaluation script. This script evaluates the performance of the blendrl on new episodes.
     """
     evaluator = Evaluator(
         episodes=episodes,

@@ -21,23 +21,24 @@
     ```
     It requires [PyG](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) and its dependencies.
     ```bash
-    pip install torch-scatter
-    pip install torch-sparse
     pip install torch-geometric
+    pip install torch-sparse
+    pip install torch-scatter
     ```
-For Mac users, you may need to install `torch-geometric` from source. Please refer to the [official installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html).
-```
-git clone https://github.com/rusty1s/pytorch_scatter.git
-cd pytorch_scatter
-python setup.py install
-```
+For Mac users, you may need to install `torch-geometric` from source. 
+    ```
+    git clone https://github.com/rusty1s/pytorch_scatter.git
+    cd pytorch_scatter
+    python setup.py install
+    ```
+Otherwise, please refer to the [official installation guide](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html).
 
 4. You can now run the training script:
     ```bash
     python train_blenderl.py --env-name seaquest --joint-training --num-steps 128 --num-envs 5 --gamma 0.99
     ```
-
+<!-- 
 5. You can also run the evaluation script:
     ```bash
-    python evaluate.py --env-name seaquest --agent-path out/runs/models/seaquest_demo
-    ```
+    python evaluate.py --env-name seaquest --agent-path models/seaquest_demo
+    ``` -->

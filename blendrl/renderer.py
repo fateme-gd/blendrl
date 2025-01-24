@@ -292,7 +292,7 @@ class Renderer:
     def _render_predicate_probs(self):
         anchor = (self.env_render_shape[0] + 10, 25)
         nsfr = self.model.actor.logic_actor
-        nsfr.print_valuations(min_value=0.1)
+        # nsfr.print_valuations(min_value=0.1)
         pred_vals = {
             pred: nsfr.get_predicate_valuation(pred, initial_valuation=False)
             for pred in nsfr.prednames

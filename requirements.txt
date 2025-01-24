@@ -2,8 +2,11 @@ tyro
 pygame
 vidmaker
 opencv-python==4.5.5.64
-gymnasium==0.29.1
 stable-baselines3
 captum
 ocatari
 hackatari
+pyyaml
+tensorboard
+rtpt
+wandb
